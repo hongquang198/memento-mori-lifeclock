@@ -28,6 +28,9 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
 
+    // M0 fix verification: the boot refresh must run outside a broadcast budget.
+    implementation(libs.androidx.work.runtime.ktx)
+
     // Glance provides a JVM unit-test harness (`runGlanceAppWidgetUnitTest`).
     testImplementation(libs.junit4)
     testImplementation(libs.androidx.glance.appwidget.testing)

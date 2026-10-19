@@ -1,6 +1,8 @@
 # M0 — Platform de-risk spike: findings
 
-**Status:** complete, with two residual items (see [Residual blockers](#residual-blockers)).
+**Status:** complete; the boot failure is root-caused (§6) *and* fix-verified by a controlled A/B
+(§9). Three residual items remain, none of them design-blocking
+(see [Residual blockers](#residual-blockers)).
 **Device:** Pixel 8a (`akita`), Android 16 / SDK 36, app `targetSdk 35`, debug (debuggable) build.
 **Libraries:** Jetpack Glance 1.1.1, Kotlin 2.0.21.
 **Method:** every claim below comes from a measurement on the physical device, not from documentation.
@@ -20,10 +22,14 @@ with the design changes they force.
 | `widget/.../SpikeRingWidget.kt` | Glance widget: ring `Image` + embedded `RemoteViews` `Chronometer`; logs every render to logcat **and** to `files/m0_render_log.txt`. |
 | `widget/.../SpikeRefreshReceiver.kt` | Drives the production refresh path (`SpikeRingWidget().updateAll(context)`) from the shell. |
 | `app/.../spike/SpikeProbeReceiver.kt` | Arms `setAndAllowWhileIdle` + `setExactAndAllowWhileIdle` and logs when each fires. |
+| `widget/.../BootRefreshReceiver.kt` | §9 fix: `BOOT_COMPLETED` → **enqueues only** (never renders) `WorkManager` work. |
+| `widget/.../RefreshWidgetsWorker.kt` | §9 fix: `CoroutineWorker` that calls `updateAll()` with a real execution budget. |
 
 No tests: this is a measurement harness, not production logic. The behaviours it measures
 (Doze, boot, widget-host rendering) cannot be expressed as unit tests; they are only observable
-on a device. Every source file above is throwaway and must be deleted before M2.
+on a device. Every source file above is throwaway and must be deleted before M2 — including the
+two §9 fix files, which call `SpikeRingWidget()` directly and are replaced by `:core:scheduler`
+(T2.12/T2.13).
 
 ### Screenshots (`docs/spikes/`)
 
@@ -37,6 +43,10 @@ on a device. Every source file above is throwaway and must be deleted before M2.
 | `m0_recovered.png` | Same widget after our own refresh call: rendering again. |
 | `m0_userboot.png` | Your reboot (repro #3): placeholder again; instance had been re-added as id 13. |
 | `m0_boot_probe.png` | Repro #4 with the `onUpdate` probe installed: the trigger arrives with the correct ids, `provideGlance` never runs. |
+| `m0_control.png` | The A/B control (§9): receiver disabled in the manifest, widget back on the placeholder. |
+| `m0_bootfix.png`, `m0_bootfirst.png` | The A/B treatment (§9): same boot, receiver enabled, ring + ticking `Chronometer`. |
+| `m0_bootfix2.png`, `m0_settled.png` | Treatment run 3: the first frame the host drew **without** the ring or background (§9). |
+| `m0_after_refresh.png` | That same widget after a single refresh: correct again, so our data was never the problem. |
 
 ---
 
@@ -269,16 +279,86 @@ Two practical notes on that channel, learned the hard way:
 
 ---
 
+## 9. The boot fix, verified (A/B in one session)
+
+§6 left one thing unproven: that moving the boot refresh out of the broadcast actually fixes the
+failure. That is now measured, not argued.
+
+**The change under test** (in `:widget`, for this verification only):
+
+* `BootRefreshReceiver` — a `BOOT_COMPLETED` receiver whose *only* action is `enqueueUniqueWork`.
+  It never renders, because a receiver runs on the same short budget that loses the race (§6).
+* `RefreshWidgetsWorker` — a `CoroutineWorker` that calls `GlanceAppWidget.updateAll()` from a
+  context with a real execution window.
+* `RECEIVE_BOOT_COMPLETED`, plus a receiver that is deliberately **not** `directBootAware`, so it
+  fires only after unlock, when credential-encrypted storage (and `WorkManager`) exists.
+
+**The control.** `pm disable-user` is refused for a non-system app on SDK 36
+(`SecurityException: Shell cannot change component state ...`), so the control was made by
+building the identical APK with one extra manifest attribute — `android:enabled="false"` on the
+receiver. Nothing else differed.
+
+| Arm | `m0_render_log.txt` after the reboot | Screen |
+| --- | --- | --- |
+| **Control** (receiver disabled) | `onUpdate ids=[13] elapsedMs=27610` — and *nothing else* | `m0_control.png`: the `initialLayout` placeholder |
+| **Treatment** (receiver enabled) | `onUpdate ids=[13]` → `boot:enqueue` → `worker:start` → `worker:updateAll-ok` → `provideGlance` | `m0_bootfix.png`, `m0_bootfirst.png`: ring + ticking `Chronometer` |
+
+The control reproduced the exact symptom that started this: the trigger arrives, the ids are
+correct, `provideGlance` never runs, and the widget sits on the placeholder. Enabling one receiver
+is the only difference between "stays broken" and "renders".
+
+**Repeatability.** Four treatments, no failures, all landing 26-36 s after `boot_completed`:
+
+| Run | `boot:enqueue` | `provideGlance` | First frame correct? |
+| --- | --- | --- | --- |
+| 1 | 31214 ms | 35938 ms | yes |
+| 2 | 31422 ms | 35010 ms | not captured |
+| 3 | 27858 ms | 30447 ms | **no — ring and background missing** |
+| 4 | 30470 ms | 36447 ms | yes |
+
+So the fix removes the placeholder failure (4/4) but does **not** guarantee the first frame is
+*visually* complete (3/4).
+
+### The one bad first frame, and what it does and does not mean
+
+In run 3 the widget showed a ticking `Chronometer` (`167:59:16` → `167:58:32`) but no ring and no
+`background()`, and it stayed that way for at least 60 s. One refresh fixed it
+(`m0_after_refresh.png`).
+
+Our data was correct at that moment: `dumpsys appwidget` reported `views_bitmap_memory=230400`
+for `id=13`, i.e. the full `240x240x4` ring bitmap **was** in the `RemoteViews` the launcher held.
+The omission therefore happened on the host's side of the fence, not in our composition.
+
+Two lessons that are worth more than the bug:
+
+1. **"`provideGlance` ran" is not an acceptance test.** The log line was present and the widget
+   was still wrong. Every future widget DoD must include *looking at the screen*.
+2. **The periodic self-heal from §6 is load-bearing**, not belt-and-braces. It is what rescues a
+   frame the host dropped.
+
+Cause unidentified, and deliberately not chased: it is a host-side rendering state, it
+self-heals, and this spike's nested-`RemoteViews` layout is replaced in M2 anyway. It is recorded
+as residual blocker 2.
+
+**A caution about reading `dumpsys appwidget`.** Its output is a *list* of instances, and each
+instance prints `id=` **followed by** its fields. Grepping with `-Context 0,1` therefore makes a
+number look like it belongs to the instance *after* it. An earlier read of this dump attributed
+`id=12`'s `views_bitmap_memory=123648` to `id=13`, which nearly produced a wrong conclusion about
+a wrongly-sized bitmap. Read the block, not the line.
+
+---
+
 ## Residual blockers
 
 | # | Item | Why it is still open | Suggested resolution |
 | --- | --- | --- | --- |
 | 1 | True deep-`IDLE` cadence never measured | `force-idle` would not hold on an actively-used phone; it parked at `QUICK_DOZE_DELAY` | Repeat on a spare/secondary device, or with the screen off and the phone left alone for hours |
-| 2 | The boot fix is **specified but not yet verified** | Root cause is established (§6) and the fix is designed, but nothing implementing it has been reboot-tested | Implement the `WorkManager`-based boot refresh (M2: T2.12/T2.13) and re-run the reboot test until the placeholder can no longer persist |
+| 2 | The **first** post-boot frame can be visually incomplete (1 of 4) | Cause unidentified; it is host-side, not our data (§9) | Re-test in M2 against the production `initialLayout`; the periodic self-heal already covers it. Close if it does not survive M2's rework |
 | 3 | No Battery Historian session captured | Needs the on-device bugreport + Battery Historian import | Capture one during M2 scheduling verification, where the numbers actually matter |
 
-Item 2 is the only one that can still invalidate a design decision, so it is the first thing M2
-must close. Items 1 and 3 can only make the cadence guarantee more precise.
+The boot *failure* from §6 is **closed** — verified by a controlled A/B in §9. What remains is
+narrower: item 2 is cosmetic and self-healing, and items 1 and 3 can only make the cadence
+guarantee more precise. None of them can invalidate a design decision.
 
 ## What M0 changes in the plan
 
@@ -294,6 +374,8 @@ must close. Items 1 and 3 can only make the cadence guarantee more precise.
    missed its first render, and a real `initialLayout`/placeholder must be designed.
    (New requirement, root-caused in §6 — and on 1.1.1 Glance's own
    `shouldLaunchAsyncRequestWorker()` escape hatch does not exist yet.)
+   **Verified in §9:** a `BOOT_COMPLETED` → `WorkManager` → `updateAll()` chain renders on 4 of 4
+   reboots, whereas the control arm (same APK, receiver disabled) never leaves the placeholder.
 5. **All internal widget broadcasts are explicit intents.** (New constraint.)
 6. **On-device measurements are recorded to a durable file, not logcat.** (New practice.)
 

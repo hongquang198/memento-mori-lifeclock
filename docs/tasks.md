@@ -89,7 +89,7 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 ### Scheduling
 - [ ] **T2.11** Tests: scheduling state machine transitions (IDLE→SCHEDULED→REFRESHED) with fake triggers.
 - [ ] **T2.12** Impl: `:core:scheduler` — unique periodic `WorkManager` work (≥15 min) + inexact boundary alarm (`setAndAllowWhileIdle`); gate ring redraw by `RefreshIntent` granularity.
-- [ ] **T2.13** Impl: receivers for `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED` → reschedule+refresh. **Required for correctness, not optional:** M0 measured that a widget can sit on Glance's `initialLayout` placeholder after a reboot (`M0-findings.md` §6). Also ship a designed `initialLayout`.
+- [ ] **T2.13** Impl: receivers for `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED` → reschedule+refresh. **Required for correctness, not optional:** M0 measured that a widget can sit on Glance's `initialLayout` placeholder after a reboot (`M0-findings.md` §6). Also ship a designed `initialLayout`. The mechanism is already **proven** in the spike (§9: boot receiver → `WorkManager` → `updateAll()`, 4/4 reboots, while the control arm never leaves the placeholder) — productionise it here, keeping the receiver to *enqueue only*. Accept only after a **visual** check: §9 also found that `provideGlance` running does not guarantee the frame the host draws is complete.
 - [ ] **T2.14** Impl: `onDeleted` → `unbind(glanceId)` (config persists); `onAppWidgetOptionsChanged` re-rasterizes for new size.
 
 ### Config Activity & binding (feature D)

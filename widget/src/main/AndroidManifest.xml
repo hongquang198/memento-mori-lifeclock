@@ -1,9 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Required to receive ACTION_BOOT_COMPLETED at all. It is a normal permission, so it is
+         granted at install time and needs no runtime request. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Library manifests are MERGED into the app manifest at build time.
          Declaring the widget receiver here keeps the widget self-contained. -->
     <application>
+
+        <!-- M0 fix verification: the boot refresh.
+             `exported="false"` is correct and safer: BOOT_COMPLETED is a protected broadcast
+             delivered by the system (which bypasses the exported check), so no other app can
+             abuse this receiver. Not `directBootAware`, so it fires only after unlock, when
+             credential-encrypted storage (and therefore WorkManager) is available. -->
+        <receiver
+            android:name="dev.mementomori.lifeclock.widget.BootRefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name="dev.mementomori.lifeclock.widget.SpikeRingWidgetReceiver"
