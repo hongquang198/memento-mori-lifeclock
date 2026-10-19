@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\candidate.json",
+    "sha256": "95a1e974bcd8d3cef54bbc87bd1bcdd81270a0b531dc1488317a485862d6740d",
+    "bytes": 14292
+  },
+  "artifact": {
+    "path": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\widget-runtime.html",
+    "sha256": "f3522376516ed8274a55dedb033f1821c000fc3287826c815ac9545cda7f03f8",
+    "bytes": 869448
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\review-3\\widget-runtime.finalize.json",
+    "summaryReceipt": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\review-3\\widget-runtime.finalize-summary.json",
+    "browserCheckReceipt": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\review-3\\widget-runtime.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-19T04:41:42.314Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4728,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 1,
+      "routesOverSuggestedBends": 8,
+      "routesOverSuggestedStretch": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "bitmap-into-views",
+            "from": "ring_renderer",
+            "to": "remote_views",
+            "label": "ImageProvider(bitmap)",
+            "collectionIndex": 10,
+            "artifactIndex": 11
+          },
+          "right": {
+            "id": "shell-update-all",
+            "from": "spike_refresh",
+            "to": "spike_widget",
+            "label": "updateAll()",
+            "collectionIndex": 18,
+            "artifactIndex": 19
+          },
+          "point": [
+            1057,
+            339
+          ]
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "unlock-gate",
+            "from": "usermanager",
+            "to": "boot_completed",
+            "label": "unlock gates delivery",
+            "collectionIndex": 0,
+            "artifactIndex": 1
+          },
+          "bends": 3,
+          "stretch": 1.257
+        },
+        {
+          "relationship": {
+            "id": "boot-to-receiver",
+            "from": "boot_completed",
+            "to": "boot_receiver",
+            "label": "BOOT_COMPLETED",
+            "collectionIndex": 1,
+            "artifactIndex": 2
+          },
+          "bends": 3,
+          "stretch": 1.264
+        },
+        {
+          "relationship": {
+            "id": "enqueue-only",
+            "from": "boot_receiver",
+            "to": "job_scheduler",
+            "label": "enqueueUniqueWork",
+            "collectionIndex": 2,
+            "artifactIndex": 3
+          },
+          "bends": 3,
+          "stretch": 1.286
+        },
+        {
+          "relationship": {
+            "id": "job-runs-worker",
+            "from": "job_scheduler",
+            "to": "refresh_worker",
+            "label": "worker runs in our process",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "bends": 3,
+          "stretch": 1.215
+        },
+        {
+          "relationship": {
+            "id": "service-broadcasts",
+            "from": "appwidget_service",
+            "to": "appwidget_update",
+            "label": "APPWIDGET_UPDATE",
+            "collectionIndex": 5,
+            "artifactIndex": 6
+          },
+          "bends": 3,
+          "stretch": 1.322
+        },
+        {
+          "relationship": {
+            "id": "update-to-onUpdate",
+            "from": "appwidget_update",
+            "to": "spike_receiver",
+            "label": "onUpdate(ids)",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "bends": 3,
+          "stretch": 1.271
+        },
+        {
+          "relationship": {
+            "id": "receiver-goasync",
+            "from": "spike_receiver",
+            "to": "goasync_budget",
+            "label": "goAsync { doUpdate }",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "bends": 3,
+          "stretch": 1.279
+        },
+        {
+          "relationship": {
+            "id": "shell-update-all",
+            "from": "spike_refresh",
+            "to": "spike_widget",
+            "label": "updateAll()",
+            "collectionIndex": 18,
+            "artifactIndex": 19
+          },
+          "bends": 4,
+          "stretch": 1.446
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "ring_renderer → remote_views crosses spike_refresh → spike_widget: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "usermanager → boot_completed needs 3 bends: move node usermanager or boot_completed so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "boot_completed → boot_receiver needs 3 bends: move node boot_completed or boot_receiver so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "boot_receiver → job_scheduler needs 3 bends: move node boot_receiver or job_scheduler so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "job_scheduler → refresh_worker needs 3 bends: move node job_scheduler or refresh_worker so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "appwidget_service → appwidget_update needs 3 bends: move node appwidget_service or appwidget_update so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "appwidget_update → spike_receiver needs 3 bends: move node appwidget_update or spike_receiver so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "spike_receiver → goasync_budget needs 3 bends: move node spike_receiver or goasync_budget so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

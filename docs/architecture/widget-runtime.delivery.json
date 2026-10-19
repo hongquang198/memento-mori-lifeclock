@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "84262dff-2203-49ad-aedf-0d6a131f44fd",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\candidate.json",
+  "output": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\widget-runtime.html",
+  "specification": {
+    "sha256": "2800edfd4f4acf509360ef9c2a9c67924a28f087627e75dfea55b60be58d0ab1",
+    "bytes": 14573
+  },
+  "artifact": {
+    "sha256": "061ca4202fb6186d67bc437374d1404c76f9039a489101820bf46bd10fb6b602",
+    "bytes": 869741
+  }
+}

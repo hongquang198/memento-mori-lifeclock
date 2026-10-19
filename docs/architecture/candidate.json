@@ -1,0 +1,331 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Widget runtime: creation, refresh and reboot paths",
+    "locale": "en",
+    "output": "docs/architecture/widget-runtime.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/hongquang198/memento-mori-lifeclock",
+      "revision": "30ba57c4071c4870f31c4c4fb412b6bcb1cd082b"
+    },
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": { "label": "Our widget code (:widget, M0 probe)" },
+        "backend": { "label": "Android platform service / mechanism" },
+        "messagebus": { "label": "System broadcast" },
+        "external": { "label": "Outside our process (host, harness)" }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "usermanager",
+      "type": "backend",
+      "label": "UserManager",
+      "sublabel": "user unlock state",
+      "tag": "gate: CE storage",
+      "pos": [40, 40],
+      "size": [170, 64],
+      "sources": [
+        { "path": "docs/spikes/M0-findings.md", "line": 292, "end_line": 294, "label": "not directBootAware" },
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/BootRefreshReceiver.kt", "line": 18, "end_line": 20 }
+      ]
+    },
+    {
+      "id": "boot_completed",
+      "type": "messagebus",
+      "label": "BOOT_COMPLETED",
+      "sublabel": "delivered after unlock",
+      "tag": "exempt from the ban",
+      "pos": [280, 40],
+      "size": [180, 64],
+      "sources": [
+        { "path": "widget/src/main/AndroidManifest.xml", "line": 17, "end_line": 23 },
+        { "path": "docs/spikes/M0-findings.md", "line": 289, "end_line": 294 }
+      ]
+    },
+    {
+      "id": "boot_receiver",
+      "type": "frontend",
+      "label": "BootRefreshReceiver",
+      "sublabel": "enqueues only, no render",
+      "tag": "M0 fix (temporary)",
+      "pos": [520, 40],
+      "size": [180, 64],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/BootRefreshReceiver.kt", "line": 26, "end_line": 37 }
+      ]
+    },
+    {
+      "id": "job_scheduler",
+      "type": "backend",
+      "label": "JobScheduler",
+      "sublabel": "WorkManager job, >=15 min floor",
+      "tag": "own execution window",
+      "pos": [760, 40],
+      "size": [190, 64],
+      "sources": [
+        { "path": "gradle/libs.versions.toml", "line": 16, "end_line": 16 },
+        { "path": "docs/plan.md", "line": 54, "end_line": 55 }
+      ]
+    },
+    {
+      "id": "refresh_worker",
+      "type": "frontend",
+      "label": "RefreshWidgetsWorker",
+      "sublabel": "CoroutineWorker.doWork()",
+      "tag": "updateAll() · retry on fail",
+      "pos": [1060, 40],
+      "size": [190, 64],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/RefreshWidgetsWorker.kt", "line": 28, "end_line": 51 }
+      ]
+    },
+    {
+      "id": "appwidget_service",
+      "type": "backend",
+      "label": "AppWidgetService",
+      "sublabel": "widget instance registry",
+      "tag": "system_server",
+      "pos": [40, 160],
+      "size": [190, 64],
+      "sources": [
+        { "path": "docs/spikes/M0-findings.md", "line": 166, "end_line": 181, "label": "re-bind invokes the provider" },
+        { "path": "docs/spikes/M0-findings.md", "line": 64, "end_line": 70, "label": "dumpsys appwidget" }
+      ]
+    },
+    {
+      "id": "appwidget_update",
+      "type": "messagebus",
+      "label": "APPWIDGET_UPDATE",
+      "sublabel": "platform-only trigger",
+      "tag": "protected action",
+      "pos": [280, 160],
+      "size": [190, 64],
+      "sources": [
+        { "path": "docs/spikes/M0-findings.md", "line": 255, "end_line": 257 }
+      ]
+    },
+    {
+      "id": "spike_receiver",
+      "type": "frontend",
+      "label": "SpikeRingWidgetReceiver",
+      "sublabel": "GlanceAppWidgetReceiver.onUpdate",
+      "tag": "M0 spike (temporary)",
+      "pos": [520, 160],
+      "size": [190, 64],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/SpikeRingWidget.kt", "line": 81, "end_line": 106 },
+        { "path": "widget/src/main/AndroidManifest.xml", "line": 25, "end_line": 41 }
+      ]
+    },
+    {
+      "id": "goasync_budget",
+      "type": "backend",
+      "label": "Broadcast goAsync window",
+      "sublabel": "a few seconds, cold start loses",
+      "tag": "where the frame dies",
+      "pos": [760, 160],
+      "size": [180, 64],
+      "sources": [
+        { "path": "docs/spikes/M0-findings.md", "line": 185, "end_line": 207 }
+      ]
+    },
+    {
+      "id": "spike_widget",
+      "type": "frontend",
+      "label": "provideGlance()",
+      "sublabel": "SpikeRingWidget composition",
+      "tag": "same code, two entries",
+      "pos": [1060, 160],
+      "size": [200, 88],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/SpikeRingWidget.kt", "line": 38, "end_line": 51 }
+      ]
+    },
+    {
+      "id": "launcher",
+      "type": "external",
+      "label": "Pixel Launcher",
+      "sublabel": "AppWidgetHost · renders our views",
+      "tag": "com.google...nexuslauncher",
+      "pos": [40, 300],
+      "size": [210, 64],
+      "sources": [
+        { "path": "docs/spikes/M0-findings.md", "line": 59, "end_line": 70, "label": "ring renders in the real host" },
+        { "path": "docs/spikes/M0-findings.md", "line": 326, "end_line": 331, "label": "host holds the RemoteViews" }
+      ]
+    },
+    {
+      "id": "driver",
+      "type": "external",
+      "label": "adb shell",
+      "sublabel": "explicit intents only",
+      "tag": "test harness",
+      "pos": [740, 580],
+      "size": [170, 64],
+      "sources": [
+        { "path": "docs/spikes/M0-findings.md", "line": 395, "end_line": 403 },
+        { "path": "docs/spikes/M0-findings.md", "line": 249, "end_line": 257 }
+      ]
+    },
+    {
+      "id": "ring_renderer",
+      "type": "frontend",
+      "label": "renderSpikeRing()",
+      "sublabel": "Canvas.drawArc -> 240x240 bitmap",
+      "tag": "only determinate ring",
+      "pos": [1060, 300],
+      "size": [195, 64],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/SpikeRing.kt", "line": 18, "end_line": 49 },
+        { "path": "docs/design.md", "line": 223, "end_line": 226 }
+      ]
+    },
+    {
+      "id": "remote_views",
+      "type": "frontend",
+      "label": "RemoteViews",
+      "sublabel": "ring bitmap + raw Chronometer",
+      "tag": "one static frame",
+      "pos": [740, 300],
+      "size": [190, 64],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/SpikeRingWidget.kt", "line": 53, "end_line": 78 }
+      ]
+    },
+    {
+      "id": "initial_layout",
+      "type": "external",
+      "label": "initialLayout",
+      "sublabel": "white card + spinner",
+      "tag": "updatePeriodMillis=0",
+      "pos": [40, 440],
+      "size": [190, 64],
+      "sources": [
+        { "path": "widget/src/main/res/xml/spike_ring_widget_info.xml", "line": 8, "end_line": 16 },
+        { "path": "docs/spikes/M0-findings.md", "line": 208, "end_line": 212 }
+      ]
+    },
+    {
+      "id": "spike_refresh",
+      "type": "frontend",
+      "label": "SpikeRefreshReceiver",
+      "sublabel": "shell-driven updateAll()",
+      "tag": "M0 spike (temporary)",
+      "pos": [1040, 580],
+      "size": [190, 64],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/SpikeRefreshReceiver.kt", "line": 30, "end_line": 45 },
+        { "path": "docs/spikes/M0-findings.md", "line": 214, "end_line": 221 }
+      ]
+    },
+    {
+      "id": "chronometer",
+      "type": "external",
+      "label": "Chronometer",
+      "sublabel": "platform View in the host",
+      "tag": "ticks 1/s, no app code",
+      "pos": [740, 440],
+      "size": [200, 64],
+      "sources": [
+        { "path": "widget/src/main/kotlin/dev/mementomori/lifeclock/widget/SpikeRingWidget.kt", "line": 68, "end_line": 78 },
+        { "path": "docs/spikes/M0-findings.md", "line": 76, "end_line": 102 }
+      ]
+    },
+    {
+      "id": "spike_probe",
+      "type": "frontend",
+      "label": "SpikeProbeReceiver",
+      "sublabel": "arms both alarms, 120 s out",
+      "tag": "M0 spike (temporary)",
+      "pos": [740, 700],
+      "size": [190, 64],
+      "sources": [
+        { "path": "app/src/main/kotlin/dev/mementomori/lifeclock/spike/SpikeProbeReceiver.kt", "line": 32, "end_line": 74 }
+      ]
+    },
+    {
+      "id": "alarm_manager",
+      "type": "backend",
+      "label": "AlarmManager",
+      "sublabel": "inexact only, measured +90 s late",
+      "tag": "no exact alarms",
+      "pos": [1040, 700],
+      "size": [190, 64],
+      "sources": [
+        { "path": "docs/spikes/M0-findings.md", "line": 118, "end_line": 156 },
+        { "path": "app/src/main/kotlin/dev/mementomori/lifeclock/spike/SpikeProbeReceiver.kt", "line": 42, "end_line": 74 }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "unlock-gate", "from": "usermanager", "to": "boot_completed", "label": "unlock gates delivery" },
+    { "id": "boot-to-receiver", "from": "boot_completed", "to": "boot_receiver", "label": "BOOT_COMPLETED" },
+    { "id": "enqueue-only", "from": "boot_receiver", "to": "job_scheduler", "label": "enqueueUniqueWork" },
+    { "id": "job-runs-worker", "from": "job_scheduler", "to": "refresh_worker", "label": "worker runs in our process" },
+    { "id": "worker-update-all", "from": "refresh_worker", "to": "spike_widget", "label": "updateAll()" },
+    { "id": "service-broadcasts", "from": "appwidget_service", "to": "appwidget_update", "label": "APPWIDGET_UPDATE" },
+    { "id": "update-to-onUpdate", "from": "appwidget_update", "to": "spike_receiver", "label": "onUpdate(ids)" },
+    { "id": "receiver-goasync", "from": "spike_receiver", "to": "goasync_budget", "label": "goAsync { doUpdate }" },
+    { "id": "budget-cancels", "from": "goasync_budget", "to": "spike_widget", "label": "cancelled silently" },
+    { "id": "compose-ring", "from": "spike_widget", "to": "ring_renderer", "label": "renderSpikeRing(0.73f)" },
+    { "id": "bitmap-into-views", "from": "ring_renderer", "to": "remote_views", "label": "ImageProvider(bitmap)" },
+    { "id": "build-views", "from": "spike_widget", "to": "remote_views", "label": "countdown RemoteViews" },
+    { "id": "embed-chronometer", "from": "remote_views", "to": "chronometer", "label": "embeds platform View" },
+    { "id": "update-appwidget", "from": "remote_views", "to": "appwidget_service", "label": "updateAppWidget(id, views)" },
+    { "id": "bind-widget", "from": "launcher", "to": "appwidget_service", "label": "bind + allocate id" },
+    { "id": "apply-views", "from": "appwidget_service", "to": "launcher", "label": "applies RemoteViews" },
+    { "id": "placeholder", "from": "launcher", "to": "initial_layout", "label": "shows until a frame arrives" },
+    { "id": "shell-refresh", "from": "driver", "to": "spike_refresh", "label": "REFRESH" },
+    { "id": "shell-update-all", "from": "spike_refresh", "to": "spike_widget", "label": "updateAll()" },
+    { "id": "shell-schedule", "from": "driver", "to": "spike_probe", "label": "SCHEDULE" },
+    { "id": "arm-alarm", "from": "spike_probe", "to": "alarm_manager", "label": "arms inexact alarm" },
+    { "id": "alarm-fires", "from": "alarm_manager", "to": "spike_probe", "label": "fires late after Doze" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Two ways into provideGlance()",
+      "items": [
+        "Broken by design: the platform re-bind sends APPWIDGET_UPDATE, Glance 1.1.1 runs the whole composition inside the receiver's goAsync window on a cold-starting process, the scope is cancelled and runAndLogExceptions discards the CancellationException silently (M0 findings 6).",
+        "Warm, onUpdate to provideGlance measured 1.6 s; that is the budget the cold start has to fit.",
+        "Fixed: BOOT_COMPLETED to enqueueUniqueWork to a CoroutineWorker with its own execution window, then updateAll().",
+        "A/B in one session: control (receiver disabled) never left the placeholder; 4 of 4 treatments rendered, 26-36 s after boot_completed.",
+        "The fix is not a first-frame guarantee: 3 of 4 treatments drew a complete first frame. In run 3 the Chronometer ticked with no ring, and one refresh fixed it; dumpsys showed the full 240x240 bitmap was already in the RemoteViews, so the omission was on the host's side."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Who is allowed to call whom",
+      "items": [
+        "onUpdate has exactly one production caller: the platform. APPWIDGET_UPDATE is a protected broadcast, so neither adb nor a normal app may send it.",
+        "Our code never talks to the launcher: Glance calls updateAppWidget(), and AppWidgetService hands the RemoteViews to the AppWidgetHost that renders them.",
+        "Every internal widget signal is an explicit intent; implicit custom-action broadcasts do not reach manifest receivers on API 26+.",
+        "updatePeriodMillis=0 means nothing retries a missed frame, so the periodic self-heal is load-bearing, not belt-and-braces."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Measured platform limits (M0)",
+      "items": [
+        "canScheduleExactAlarms() is false on the test device; setExactAndAllowWhileIdle() throws SecurityException. USE_EXACT_ALARM is reserved for alarm-clock and calendar apps.",
+        "Inexact setAndAllowWhileIdle arrived +90 s late in light Doze, and was deferred rather than lost when the device stayed idle.",
+        "The ring is a static frame; only the text ticks. The Chronometer base is elapsedRealtime(), which resets on reboot, so it must be recomputed on every render and never persisted.",
+        "Measurements went to files/m0_render_log.txt in app-private storage because logcat lost the decisive line."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Probe code, not the target architecture",
+      "items": [
+        "Throwaway, delete before M2: SpikeRingWidget, SpikeRing.kt, SpikeRefreshReceiver, SpikeProbeReceiver, BootRefreshReceiver, RefreshWidgetsWorker.",
+        "The boot fix lives in :widget only because Glance is on :widget's classpath; in M2 the refresh policy moves to :core:scheduler behind an interface (T2.12/T2.13) and the direct updateAll() call is replaced there.",
+        "Included but still scaffolding: :core:model, :core:time, :core:mortality, :core:data, :core:scheduler, :feature:config (settings.gradle.kts). They hold no runtime role in this trace."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\candidate.json",
+    "sha256": "d6e7e83fbc1d68b081981c154bf902b25a9440101cdb582e016cca135ff7624c",
+    "bytes": 14299
+  },
+  "artifact": {
+    "path": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\widget-runtime.html"
+  },
+  "gates": {
+    "validate": "fail",
+    "deliver": "not-run",
+    "check": "not-run",
+    "browser-check": "not-run"
+  },
+  "failedStage": "validate",
+  "diagnostics": [
+    {
+      "code": "composition/label-gap",
+      "severity": "error",
+      "message": "Label \"scope cancelled, swallowed\" has only 60px between \"goasync_budget\" and \"spike_widget\"; it needs at least 151px to stay beside its route — increase that clear gap or place the connected nodes on another readable row, preserving the label.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "id": "budget-cancels",
+        "from": "goasync_budget",
+        "to": "spike_widget"
+      },
+      "evidence": {
+        "clearGapPx": 60,
+        "minimumGapPx": 151,
+        "labelWidthPx": 134.8,
+        "obstacles": [
+          "goasync_budget",
+          "spike_widget"
+        ]
+      },
+      "supportedFixes": [
+        "increase the clear gap between the connected nodes to at least 151px",
+        "reposition the connected nodes together while preserving the full relationship label"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\review-1\\widget-runtime.finalize.json",
+    "summaryReceipt": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\review-1\\widget-runtime.finalize-summary.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-19T04:41:42.314Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1046,
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "nextAction": {
+    "action": "edit-in-place",
+    "candidate": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\candidate.json",
+    "constraint": "Preserve unaffected semantics and geometry; apply each diagnostic's supportedFixes, or the fix its message names, and do not replace the whole candidate.",
+    "then": "finalize-once"
+  }
+}

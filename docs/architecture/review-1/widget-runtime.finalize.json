@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-10-19T04:41:42.038Z",
+  "specification": {
+    "path": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\candidate.json",
+    "sha256": "d6e7e83fbc1d68b081981c154bf902b25a9440101cdb582e016cca135ff7624c",
+    "bytes": 14299
+  },
+  "artifact": {
+    "path": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\widget-runtime.html"
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\ADMIN\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "architecture",
+        "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\candidate.json",
+        "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\widget-runtime.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "D:\\development\\personal-projects\\memento-mori-lifeclock",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "d69c126b-a3a8-410f-aba4-91dc2d5d772d",
+        "stage": "render",
+        "type": "architecture",
+        "input": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\candidate.json",
+        "output": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\widget-runtime.html",
+        "error": "Architecture layout validation failed:\n- Label \"scope cancelled, swallowed\" has only 60px between \"goasync_budget\" and \"spike_widget\"; it needs at least 151px to stay beside its route — increase that clear gap or place the connected nodes on another readable row, preserving the label.",
+        "diagnostics": [
+          {
+            "code": "composition/label-gap",
+            "severity": "error",
+            "message": "Label \"scope cancelled, swallowed\" has only 60px between \"goasync_budget\" and \"spike_widget\"; it needs at least 151px to stay beside its route — increase that clear gap or place the connected nodes on another readable row, preserving the label.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "id": "budget-cancels",
+              "from": "goasync_budget",
+              "to": "spike_widget"
+            },
+            "evidence": {
+              "clearGapPx": 60,
+              "minimumGapPx": 151,
+              "labelWidthPx": 134.8,
+              "obstacles": [
+                "goasync_budget",
+                "spike_widget"
+              ]
+            },
+            "supportedFixes": [
+              "increase the clear gap between the connected nodes to at least 151px",
+              "reposition the connected nodes together while preserving the full relationship label"
+            ]
+          }
+        ],
+        "provenance": "absent",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "diagnostics": [
+    {
+      "code": "composition/label-gap",
+      "severity": "error",
+      "message": "Label \"scope cancelled, swallowed\" has only 60px between \"goasync_budget\" and \"spike_widget\"; it needs at least 151px to stay beside its route — increase that clear gap or place the connected nodes on another readable row, preserving the label.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "id": "budget-cancels",
+        "from": "goasync_budget",
+        "to": "spike_widget"
+      },
+      "evidence": {
+        "clearGapPx": 60,
+        "minimumGapPx": 151,
+        "labelWidthPx": 134.8,
+        "obstacles": [
+          "goasync_budget",
+          "spike_widget"
+        ]
+      },
+      "supportedFixes": [
+        "increase the clear gap between the connected nodes to at least 151px",
+        "reposition the connected nodes together while preserving the full relationship label"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\review-1\\widget-runtime.finalize.json",
+    "summaryReceipt": "D:\\development\\personal-projects\\memento-mori-lifeclock\\docs\\architecture\\review-1\\widget-runtime.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-10-19T04:41:43.084Z",
+  "durationMs": 1046,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-19T04:41:42.314Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}
