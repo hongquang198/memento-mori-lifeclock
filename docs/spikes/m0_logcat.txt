@@ -1,0 +1,6 @@
+--------- beginning of main
+         1792245396.032  7369  7369 I SPIKE   : provideGlance id=AppWidgetId(appWidgetId=8) wallMs=1792245396031 elapsedMs=628218782
+         1792246226.148  7369  7369 I SPIKE   : SCHEDULE exactAlarmsAllowed=false sdk=36 wallMs=1792246226148
+         1792246226.152  7369  7369 I SPIKE   : ARMED exact=false delayMs=120000 elapsedMs=629048903
+         1792246226.155  7369  7369 W SPIKE   : ARM-FAILED exact=true reason=SecurityException: Caller dev.mementomori.lifeclock needs to hold android.permission.SCHEDULE_EXACT_ALARM or android.permission.USE_EXACT_ALARM to set exact alarms.
+         1792246436.221  7369  7369 I SPIKE   : INEXACT-FIRED latenessMs=90072 wallMs=1792246436221 elapsedMs=629258971

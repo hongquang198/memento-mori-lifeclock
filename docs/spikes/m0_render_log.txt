@@ -1,0 +1,7 @@
+provideGlance id=AppWidgetId(appWidgetId=8) wallMs=1792247091536 elapsedMs=342819
+provideGlance id=AppWidgetId(appWidgetId=8) wallMs=1792247782260 elapsedMs=657549
+provideGlance id=AppWidgetId(appWidgetId=13) wallMs=1792380367421 elapsedMs=133242709
+onUpdate ids=[13] wallMs=1792381446096 elapsedMs=1028397
+provideGlance id=AppWidgetId(appWidgetId=13) wallMs=1792381447720 elapsedMs=1030020
+onUpdate ids=[13] wallMs=1792381450495 elapsedMs=1032795
+onUpdate ids=[13] wallMs=1792381528752 elapsedMs=30947

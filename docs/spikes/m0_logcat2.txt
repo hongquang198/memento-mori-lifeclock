@@ -1,0 +1,4 @@
+--------- beginning of main
+         1792246527.137  7369  7369 I SPIKE   : SCHEDULE exactAlarmsAllowed=false sdk=36 wallMs=1792246527136
+         1792246527.142  7369  7369 I SPIKE   : ARMED exact=false delayMs=120000 elapsedMs=629349892
+         1792246527.147  7369  7369 W SPIKE   : ARM-FAILED exact=true reason=SecurityException: Caller dev.mementomori.lifeclock needs to hold android.permission.SCHEDULE_EXACT_ALARM or android.permission.USE_EXACT_ALARM to set exact alarms.
