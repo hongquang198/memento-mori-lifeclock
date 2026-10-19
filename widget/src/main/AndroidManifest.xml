@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Library manifests are MERGED into the app manifest at build time.
+         Declaring the widget receiver here keeps the widget self-contained. -->
+    <application>
+
+        <receiver
+            android:name="dev.mementomori.lifeclock.widget.SpikeRingWidgetReceiver"
+            android:exported="true"
+            android:label="Spike Ring (M0)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- Glance's own debug trigger. Unlike android.appwidget.action.APPWIDGET_UPDATE
+                     (protected), this one is a normal action we can send over adb:
+                     adb shell am broadcast -a androidx.glance.appwidget.action.DEBUG_UPDATE -n ...
+                     Glance then enumerates the widget ids itself and calls onUpdate.
+                     DEBUG BUILDS ONLY: must be removed before release. -->
+                <action android:name="androidx.glance.appwidget.action.DEBUG_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/spike_ring_widget_info" />
+        </receiver>
+
+        <!-- M0 spike (T0.4) only: lets us drive a refresh from the shell, because the real
+             `android.appwidget.action.APPWIDGET_UPDATE` is a protected broadcast that neither
+             an app nor adb may send. Delete before M2. -->
+        <receiver
+            android:name="dev.mementomori.lifeclock.widget.SpikeRefreshReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="dev.mementomori.lifeclock.spike.REFRESH" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

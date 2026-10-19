@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- A minimal platform theme for now; Compose drives the real look.
+         Using a platform parent avoids pulling in the Material Components dependency. -->
+    <style name="Theme.MementoMori" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
