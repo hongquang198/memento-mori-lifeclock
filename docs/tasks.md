@@ -51,12 +51,15 @@ module has **zero** Android imports — the boundary is the lesson.
 - [x] **T1.2** Impl: `CountdownModel.slices()` — days, clamping, zero/negative handling.
 - [x] **T1.3** Tests: `WEEKS` (whole weeks) incl. partial-week boundary.
 - [x] **T1.4** Impl: weeks.
-- [ ] **T1.5** Tests: `MONTHS` = **calendar** months (`ChronoUnit.MONTHS`), month-end, leap year.
-- [ ] **T1.6** Impl: months.
-- [ ] **T1.7** Tests: DST transitions, timezone-sensitive `Instant` handling, far-future dates.
-- [ ] **T1.8** Impl: fix any tz/DST defects; `NET_FREE_HOURS` slice (sleep + maintenance subtracted).
-- [ ] **T1.9** Property tests (Kotest): `fractionRemaining ∈ [0,1]`, monotonic decrease over time.
-- **DoD:** all `:core:time` tests green; `:core:time` has **no Android dependency** (`./gradlew :core:time:test`).
+- [x] **T1.5** Tests: `MONTHS` = **calendar** months (`ChronoUnit.MONTHS`), month-end, leap year.
+- [x] **T1.6** Impl: months.
+- [x] **T1.7** Tests: DST transitions, timezone-sensitive `Instant` handling, far-future dates.
+- [x] **T1.8** Impl: fix any tz/DST defects; `NET_FREE_HOURS` slice (sleep + maintenance subtracted).
+- [x] **T1.9** Property tests (Kotest): `fractionRemaining ∈ [0,1]`, monotonic decrease over time.
+- **DoD:** **Met** — 31 tests green in ~0.5 s; `:core:time` has no Android dependency and no
+  `android.*` import. Two contract changes were forced by the work itself: `TimeSlice.remaining` /
+  `total` are `Long` **counts**, not `Duration` (a month has no fixed length), and `slices()` takes
+  a `ZoneId` (a calendar month does not exist without a zone). Both are recorded in `design.md` §2.2.
 
 ---
 

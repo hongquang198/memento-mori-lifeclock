@@ -56,8 +56,8 @@ enum class TimeCategory { DAYS, WEEKS, MONTHS, NET_FREE_HOURS }
 /** A single ring's data: how much is left and how full the ring should be. */
 data class TimeSlice(
     val category: TimeCategory,
-    val remaining: Duration,
-    val total: Duration,          // reference total at `start`
+    val remaining: Long,          // in this category's own unit, rounded up
+    val total: Long,              // the same count for the whole target, at `start`
     val fractionRemaining: Double // 0.0..1.0, clamped
 )
 
@@ -72,20 +72,29 @@ data class FreeTimePolicy(
 )
 
 interface CountdownModel {
-    fun slices(target: CountdownTarget, now: Instant): List<TimeSlice>
+    fun slices(target: CountdownTarget, now: Instant, zone: ZoneId): List<TimeSlice>
 }
 ```
-- `DAYS` = whole days left; `total` = the same at `start`. `WEEKS` = whole weeks. `MONTHS` =
-  **calendar** months via `java.time` (`ChronoUnit.MONTHS`), not 30-day months.
-- **Two different numbers, deliberately.** `remaining` is *quantized for display* (whole days,
-  **rounded up**); `fractionRemaining` is computed from the **exact** instants and clamped to
-  `[0,1]`, so the arc moves continuously while the text ticks once a day.
+- `DAYS` / `WEEKS` count **elapsed** units (24 h, and 7 × 24 h). `MONTHS` is a **calendar** count
+  via `ChronoUnit.MONTHS`, not 30-day months.
+- `zone` is a parameter, not a hidden default. A calendar month only exists inside a time zone:
+  the same instant can be 28 Feb in UTC and 1 Mar in Tokyo, so `MONTHS` would silently change
+  answer if the engine read the system default. A test pins exactly that pair.
+- `remaining` / `total` are `Long` **counts in the category's unit**, not `Duration`. A month has
+  no fixed length, and inventing `Duration.ofDays(30)` would be a lie that callers would start
+  doing arithmetic on. The renderer formats `3` + `DAYS`; it never does date math.
+- **Two different numbers, deliberately.** `remaining` is rounded **up** to whole units;
+  `fractionRemaining` comes from the **exact** instants and is clamped to `[0,1]`, so the arc
+  moves continuously while the text ticks once a day.
   Rounding up is what makes the two agree: at 2.9 days left on a 10-day countdown the text says
   "3 days" and the arc reads 29% — 3/10. Truncating would print "2 days" beside a 29%-full arc,
   and would also read "0 days" during the last day.
-- `NET_FREE_HOURS`: remaining wake hours − sleep − maintenance. `CountdownModel` receives a
-  `FreeTimePolicy` **at construction**, so `:core:time` never references `:core:mortality` or
-  its constants.
+- `fractionRemaining` is **identical for every category**: it describes elapsed time, not how
+  that time is displayed. A property test pins this, so four arcs in a `CONCENTRIC` widget cannot
+  drift apart.
+- `NET_FREE_HOURS`: `(elapsed hours − sleep) × (1 − maintenance)`. `CountdownModel` receives a
+  `FreeTimePolicy` **at construction**, so `:core:time` never references `:core:mortality` or its
+  constants. Without a policy the slice is simply absent.
 - Clamp negatives to zero; `end <= start` ⇒ `slices()` returns an **empty list** (there is no
   meaningful fraction, and a `0/0` would be `NaN`).
 
