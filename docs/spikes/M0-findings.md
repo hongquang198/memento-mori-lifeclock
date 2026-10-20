@@ -246,6 +246,45 @@ Do not implement (1) as "receiver calls `updateAll()` directly". Either upgrade 
 version with `shouldLaunchAsyncRequestWorker()`, or use the `WorkManager` indirection above.
 
 
+### The exact call site (verified in the pinned AAR, not inferred)
+
+The `goAsync` in the failure path is **not in our code**. Ours only logs and delegates:
+
+```
+SpikeRingWidgetReceiver.onUpdate          (ours)
+  └─ super.onUpdate                        GlanceAppWidgetReceiver
+       └─ CoroutineBroadcastReceiverKt.goAsync(receiver, Dispatchers.Default) { compose }
+            ├─ CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            ├─ BroadcastReceiver.goAsync() → PendingResult    <-- the borrowed budget
+            └─ scope.launch { compose } → finish()
+```
+
+`javap -p -c` on the pinned `glance-appwidget-1.1.1.aar` confirms the helper calls the real
+platform API:
+
+```
+  3: invokestatic  kotlinx/coroutines/SupervisorKt.SupervisorJob$default
+ 12: invokestatic  kotlinx/coroutines/CoroutineScopeKt.CoroutineScope
+ 17: invokevirtual android/content/BroadcastReceiver.goAsync()Landroid/content/BroadcastReceiver$PendingResult;
+ 42: invokestatic  kotlinx/coroutines/BuildersKt.launch$default
+```
+
+and that the swallow exists — from the exception table of
+`GlanceAppWidgetReceiverKt.runAndLogExceptions`:
+
+```
+    2    10    13   Class java/util/concurrent/CancellationException
+```
+
+So we never opted into the budget: we opted into `GlanceAppWidgetReceiver`, and the budget came
+with it. That is why the failure is invisible from our own source tree.
+
+Our own `SpikeRefreshReceiver` hand-rolls the identical pattern (`goAsync()` +
+`Dispatchers.Default` + `finish()`), so it carries the same risk. It only looks safe because the
+spike only ever triggers it against a **warm** process.
+
+---
+
 ## 7. Broadcast semantics discovered along the way
 
 * **Implicit custom-action broadcasts do not reach manifest receivers** (API 26+ background
@@ -345,6 +384,24 @@ instance prints `id=` **followed by** its fields. Grepping with `-Context 0,1` t
 number look like it belongs to the instance *after* it. An earlier read of this dump attributed
 `id=12`'s `views_bitmap_memory=123648` to `id=13`, which nearly produced a wrong conclusion about
 a wrongly-sized bitmap. Read the block, not the line.
+
+### The first doorbell is still broken
+
+§9 verified a **rescue**, not a repair. On the treatment boots the widget renders because
+`BOOT_COMPLETED` arrives second and enqueues the worker: the treatment log shows exactly **one**
+`provideGlance`, and it lands *after* `worker:updateAll-ok`, never from `onUpdate`. The
+framework's boot-time `onUpdate` loses the same race every time, with the same silence.
+
+This matters for M2. A rescue net that depends on a *second* broadcast surviving is weaker than
+removing the budgeted path altogether. The options are:
+
+* override `onUpdate` and **do not call `super`**, enqueueing instead of composing (works on
+  1.1.1, but we then own the divergence on every Glance upgrade), or
+* upgrade Glance to a version with `shouldLaunchAsyncRequestWorker()`, the library-blessed form
+  of the same idea.
+
+Choose with a measurement, not a preference: **how much latency does deferring a warm
+`APPWIDGET_UPDATE` add?** (T2.13).
 
 ---
 

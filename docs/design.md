@@ -63,16 +63,29 @@ data class TimeSlice(
 
 data class CountdownTarget(val start: Instant, val end: Instant)
 
+/** Sleep + maintenance removed before a countdown is expressed in "free" hours.
+ *  The ATUS-derived default lives in `:core:mortality`; `:core:time` only does the math,
+ *  so the dependency never points upward. */
+data class FreeTimePolicy(
+    val sleepHoursPerDay: Double,
+    val maintenanceRatio: Double,
+)
+
 interface CountdownModel {
     fun slices(target: CountdownTarget, now: Instant): List<TimeSlice>
 }
 ```
-- `DAYS` = `Duration.between(now, end).toDays()`; `total` = same at `start`.
-- `WEEKS` = whole weeks (`toDays() / 7`).
-- `MONTHS` = **calendar** months via `java.time` (`ChronoUnit.MONTHS`), not 30-day.
-- `NET_FREE_HOURS`: remaining wake hours − sleep − maintenance, using the profile's
-  `sleepHoursPerDay` and ATUS-derived maintenance ratio (see `:core:mortality` constants).
-- Clamp negatives to zero; `end <= start` ⇒ empty/zeroed slice.
+- `DAYS` = whole days left; `total` = the same at `start`. `WEEKS` = whole weeks. `MONTHS` =
+  **calendar** months via `java.time` (`ChronoUnit.MONTHS`), not 30-day months.
+- **Two different numbers, deliberately.** `remaining` is *quantized for display* (whole days,
+  truncated); `fractionRemaining` is computed from the **exact** instants and clamped to
+  `[0,1]`, so the ring moves continuously while the text ticks once a day. Consequence worth
+  knowing: at 2.9 days left the text says "2 days" while the ring reads ~97%.
+- `NET_FREE_HOURS`: remaining wake hours − sleep − maintenance. `CountdownModel` receives a
+  `FreeTimePolicy` **at construction**, so `:core:time` never references `:core:mortality` or
+  its constants.
+- Clamp negatives to zero; `end <= start` ⇒ `slices()` returns an **empty list** (there is no
+  meaningful fraction, and a `0/0` would be `NaN`).
 
 ### 2.3 Mortality engine (`:core:mortality`)
 ```kotlin

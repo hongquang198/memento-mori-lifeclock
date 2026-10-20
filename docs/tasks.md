@@ -46,9 +46,9 @@ why a *pure* module compiles and tests in milliseconds.
 **Review focus:** contrast each construct with its Dart/Flutter equivalent; note that this
 module has **zero** Android imports — the boundary is the lesson.
 
-- [ ] **T1.0** Define `Clock` and `FakeClock` (test fixture).
-- [ ] **T1.1** Tests: `DAYS` slice value + `fractionRemaining` for start/end/now cases.
-- [ ] **T1.2** Impl: `CountdownModel.slices()` — days, clamping, zero/negative handling.
+- [x] **T1.0** Define `Clock` and `FakeClock` (test fixture).
+- [x] **T1.1** Tests: `DAYS` slice value + `fractionRemaining` for start/end/now cases.
+- [x] **T1.2** Impl: `CountdownModel.slices()` — days, clamping, zero/negative handling.
 - [ ] **T1.3** Tests: `WEEKS` (whole weeks) incl. partial-week boundary.
 - [ ] **T1.4** Impl: weeks.
 - [ ] **T1.5** Tests: `MONTHS` = **calendar** months (`ChronoUnit.MONTHS`), month-end, leap year.
@@ -89,7 +89,7 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 ### Scheduling
 - [ ] **T2.11** Tests: scheduling state machine transitions (IDLE→SCHEDULED→REFRESHED) with fake triggers.
 - [ ] **T2.12** Impl: `:core:scheduler` — unique periodic `WorkManager` work (≥15 min) + inexact boundary alarm (`setAndAllowWhileIdle`); gate ring redraw by `RefreshIntent` granularity.
-- [ ] **T2.13** Impl: receivers for `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED` → reschedule+refresh. **Required for correctness, not optional:** M0 measured that a widget can sit on Glance's `initialLayout` placeholder after a reboot (`M0-findings.md` §6). Also ship a designed `initialLayout`. The mechanism is already **proven** in the spike (§9: boot receiver → `WorkManager` → `updateAll()`, 4/4 reboots, while the control arm never leaves the placeholder) — productionise it here, keeping the receiver to *enqueue only*. Accept only after a **visual** check: §9 also found that `provideGlance` running does not guarantee the frame the host draws is complete.
+- [ ] **T2.13** Impl: receivers for `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED` → reschedule+refresh. **Required for correctness, not optional:** M0 measured that a widget can sit on Glance's `initialLayout` placeholder after a reboot (`M0-findings.md` §6). Also ship a designed `initialLayout`. The mechanism is already **proven** in the spike (§9: boot receiver → `WorkManager` → `updateAll()`, 4/4 reboots, while the control arm never leaves the placeholder) — productionise it here, keeping the receiver to *enqueue only*. Accept only after a **visual** check: §9 also found that `provideGlance` running does not guarantee the frame the host draws is complete. **The framework's boot `onUpdate` is still a race** — §9 verified a rescue, not a repair (one `provideGlance`, following `worker:updateAll-ok`, never from `onUpdate`). Also close the race at its source: either override `onUpdate` without calling `super` and enqueue instead, or upgrade Glance for `shouldLaunchAsyncRequestWorker()`. Decide by measuring the latency that deferring a warm `APPWIDGET_UPDATE` adds.
 - [ ] **T2.14** Impl: `onDeleted` → `unbind(glanceId)` (config persists); `onAppWidgetOptionsChanged` re-rasterizes for new size.
 
 ### Config Activity & binding (feature D)
