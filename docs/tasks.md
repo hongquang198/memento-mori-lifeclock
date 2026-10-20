@@ -49,8 +49,8 @@ module has **zero** Android imports — the boundary is the lesson.
 - [x] **T1.0** Define `Clock` and `FakeClock` (test fixture).
 - [x] **T1.1** Tests: `DAYS` slice value + `fractionRemaining` for start/end/now cases.
 - [x] **T1.2** Impl: `CountdownModel.slices()` — days, clamping, zero/negative handling.
-- [ ] **T1.3** Tests: `WEEKS` (whole weeks) incl. partial-week boundary.
-- [ ] **T1.4** Impl: weeks.
+- [x] **T1.3** Tests: `WEEKS` (whole weeks) incl. partial-week boundary.
+- [x] **T1.4** Impl: weeks.
 - [ ] **T1.5** Tests: `MONTHS` = **calendar** months (`ChronoUnit.MONTHS`), month-end, leap year.
 - [ ] **T1.6** Impl: months.
 - [ ] **T1.7** Tests: DST transitions, timezone-sensitive `Instant` handling, far-future dates.

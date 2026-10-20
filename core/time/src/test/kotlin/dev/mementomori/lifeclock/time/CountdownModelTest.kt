@@ -18,10 +18,15 @@ private val END: Instant = START.plus(Duration.ofDays(10))
  */
 class CountdownModelTest : FunSpec({
 
-    fun sliceAt(now: Instant, start: Instant = START, end: Instant = END): TimeSlice? =
+    fun sliceAt(
+        now: Instant,
+        category: TimeCategory = TimeCategory.DAYS,
+        start: Instant = START,
+        end: Instant = END,
+    ): TimeSlice? =
         DefaultCountdownModel()
             .slices(CountdownTarget(start, end), now)
-            .singleOrNull { it.category == TimeCategory.DAYS }
+            .singleOrNull { it.category == category }
 
     test("DAYS at the start: full total, full ring") {
         val slice = sliceAt(START)!!
@@ -66,6 +71,46 @@ class CountdownModelTest : FunSpec({
         // 4 hours left is still "1 day" for display purposes; 0 would look expired.
         val slice = sliceAt(END.minus(Duration.ofHours(4)))!!
         slice.remaining shouldBe Duration.ofDays(1)
+    }
+
+    test("WEEKS: a 10-day countdown spans 2 weeks") {
+        val slice = sliceAt(START, TimeCategory.WEEKS)!!
+        slice.total shouldBe Duration.ofDays(14)
+        slice.remaining shouldBe Duration.ofDays(14)
+        slice.fractionRemaining shouldBe 1.0
+    }
+
+    test("WEEKS: a 15-day countdown spans 3 weeks") {
+        val slice = sliceAt(
+            now = START,
+            category = TimeCategory.WEEKS,
+            end = START.plus(Duration.ofDays(15)),
+        )!!
+        slice.total shouldBe Duration.ofDays(21)
+    }
+
+    test("WEEKS: 7.5 days left is still in the second week, so it reads 2") {
+        // Rounding weeks must use the exact duration, not truncated days: 7.5 days is
+        // ceil(7.5 / 7) = 2 weeks, while truncating to 7 days first would wrongly say 1.
+        val slice = sliceAt(END.minus(Duration.ofDays(7)).minus(Duration.ofHours(12)), TimeCategory.WEEKS)!!
+        slice.remaining shouldBe Duration.ofDays(14)
+    }
+
+    test("WEEKS: exactly 7 days left reads 1") {
+        val slice = sliceAt(END.minus(Duration.ofDays(7)), TimeCategory.WEEKS)!!
+        slice.remaining shouldBe Duration.ofDays(7)
+    }
+
+    test("WEEKS: past the deadline clamps to zero") {
+        val slice = sliceAt(END.plus(Duration.ofDays(5)), TimeCategory.WEEKS)!!
+        slice.remaining shouldBe Duration.ZERO
+        slice.fractionRemaining shouldBe 0.0
+    }
+
+    test("DAYS and WEEKS report the same fraction: only the display unit differs") {
+        val now = END.minus(Duration.ofHours(70))
+        sliceAt(now, TimeCategory.DAYS)!!.fractionRemaining shouldBe
+            sliceAt(now, TimeCategory.WEEKS)!!.fractionRemaining
     }
 
     test("a zero-length countdown has no meaningful slice") {
