@@ -54,12 +54,18 @@ class CountdownModelTest : FunSpec({
         slice.fractionRemaining shouldBe 1.0
     }
 
-    test("remaining is quantized for display while the ring stays exact") {
-        // 70 h = 2.9 days left. The text must not claim "3 days", and the ring must not round
-        // to the same place: 70/240 = 29%, not "nearly full".
+    test("display rounds up, and stays consistent with the exact arc") {
+        // 70 h = 2.9 days left. Rounding up gives "3 days"; 3/10 agrees with the arc's 29%.
+        // Truncating would print "2 days" next to a 29%-full arc - two contradicting numbers.
         val slice = sliceAt(END.minus(Duration.ofHours(70)))!!
-        slice.remaining shouldBe Duration.ofDays(2)
+        slice.remaining shouldBe Duration.ofDays(3)
         (slice.fractionRemaining * 100).toInt() shouldBe 29
+    }
+
+    test("the final partial day reads 1, never 0") {
+        // 4 hours left is still "1 day" for display purposes; 0 would look expired.
+        val slice = sliceAt(END.minus(Duration.ofHours(4)))!!
+        slice.remaining shouldBe Duration.ofDays(1)
     }
 
     test("a zero-length countdown has no meaningful slice") {

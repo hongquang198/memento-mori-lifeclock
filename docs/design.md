@@ -78,9 +78,11 @@ interface CountdownModel {
 - `DAYS` = whole days left; `total` = the same at `start`. `WEEKS` = whole weeks. `MONTHS` =
   **calendar** months via `java.time` (`ChronoUnit.MONTHS`), not 30-day months.
 - **Two different numbers, deliberately.** `remaining` is *quantized for display* (whole days,
-  truncated); `fractionRemaining` is computed from the **exact** instants and clamped to
-  `[0,1]`, so the ring moves continuously while the text ticks once a day. Consequence worth
-  knowing: at 2.9 days left the text says "2 days" while the ring reads ~97%.
+  **rounded up**); `fractionRemaining` is computed from the **exact** instants and clamped to
+  `[0,1]`, so the arc moves continuously while the text ticks once a day.
+  Rounding up is what makes the two agree: at 2.9 days left on a 10-day countdown the text says
+  "3 days" and the arc reads 29% — 3/10. Truncating would print "2 days" beside a 29%-full arc,
+  and would also read "0 days" during the last day.
 - `NET_FREE_HOURS`: remaining wake hours − sleep − maintenance. `CountdownModel` receives a
   `FreeTimePolicy` **at construction**, so `:core:time` never references `:core:mortality` or
   its constants.
@@ -237,6 +239,12 @@ All settings live **in the app**. A widget is a dumb, stateless renderer of the
 
 Because Glance's `CircularProgressIndicator` is **indeterminate-only**, we rasterize the
 determinate ring ourselves.
+
+> **Vocabulary — ring vs arc.** *Ring* is the whole circular element: track + drawn segment +
+> stroke, i.e. the thing the user configures and the bitmap contains. *Arc* is a drawn segment
+> of that circle — the filled portion, or the 360° track (`Canvas.drawArc`). So: **ring** for the
+> contract and the style types (`RingStyle`, `RingRenderer`), **arc** whenever we mean the
+> geometry. One word per concept; they are not synonyms.
 
 ### 4.1 Customization spectrum, layouts & presets (feature C)
 

@@ -8,8 +8,8 @@ import java.time.Instant
  *
  * The two numbers in a [TimeSlice] are computed differently on purpose (design.md §2.2):
  *
- *  - [TimeSlice.remaining] is quantized to whole days via [Duration.toDays], so the text ticks
- *    once a day instead of on every render.
+ *  - [TimeSlice.remaining] is rounded **up** to whole days ([ceilToDays]), so the text ticks
+ *    once a day instead of on every render, and the final day never reads zero.
  *  - [TimeSlice.fractionRemaining] comes from the **exact** durations, so the ring moves
  *    smoothly and does not look frozen between ticks.
  *
@@ -39,10 +39,26 @@ class DefaultCountdownModel(
 
         return TimeSlice(
             category = TimeCategory.DAYS,
-            remaining = Duration.ofDays(remainingExact.toDays()),
-            total = Duration.ofDays(totalExact.toDays()),
+            remaining = remainingExact.ceilToDays(),
+            total = totalExact.ceilToDays(),
             fractionRemaining = fractionOf(remainingExact, totalExact),
         )
+    }
+
+    /**
+     * Rounds **up** to whole days.
+     *
+     * Two reasons, and the second is the one that decided it:
+     *
+     * 1. A countdown must never read "0 days" while time remains: with 4 hours left, "1 day" is
+     *    the honest number for "still in the final day".
+     * 2. It keeps the text and the arc consistent. 2.9 days left on a 10-day countdown shows
+     *    "3 days", and 3/10 agrees with the arc's 29%. Truncating would print "2 days" beside a
+     *    29%-full arc, i.e. two numbers that contradict each other.
+     */
+    private fun Duration.ceilToDays(): Duration {
+        val truncated = Duration.ofDays(toDays())
+        return if (truncated == this) truncated else Duration.ofDays(toDays() + 1)
     }
 
     /**
