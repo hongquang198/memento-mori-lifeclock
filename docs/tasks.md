@@ -74,9 +74,9 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 **scheduling state machine**, and the Glance→`RemoteViews` translation in the renderer.
 
 ### Persistence
-- [ ] **T2.1** Tests: `WidgetConfigRecord`/`WidgetInstanceBinding`/`RingStyleRecord` serialize round-trip (kotlinx).
-- [ ] **T2.2** Impl: DataStore + `WidgetConfigRepository` (catalog CRUD) + `WidgetBindingRepository` (bind/unbind) + in-memory fakes.
-- [ ] **T2.3** Tests: two bindings → one config; editing the config re-renders **both**; deleting a bound config is guarded; rebinding moves an instance.
+- [x] **T2.1** Tests: `WidgetConfigRecord`/`WidgetInstanceBinding`/`RingStyleRecord` serialize round-trip (kotlinx).
+- [x] **T2.2** Impl: DataStore + `WidgetConfigRepository` (catalog CRUD) + `WidgetBindingRepository` (bind/unbind) + in-memory fakes.
+- [x] **T2.3** Tests: two bindings → one config; editing the config re-renders **both**; deleting a bound config is guarded; rebinding moves an instance.
 
 ### Ring rendering
 - [ ] **T2.4** Tests: `CanvasRingRenderer` — arc sweep ∝ fraction; stroke width; colors (golden/hash).

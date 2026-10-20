@@ -1,5 +1,6 @@
 package dev.mementomori.lifeclock.time
 
+import dev.mementomori.lifeclock.model.TimeCategory
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual

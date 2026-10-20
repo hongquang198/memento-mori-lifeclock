@@ -51,6 +51,7 @@ Injected at every boundary. Production: `Clock.systemUTC()`. Tests: `FakeClock`.
 
 ### 2.2 Countdown engine (`:core:time`)
 ```kotlin
+// TimeCategory lives in :core:model - persisted configs and the UI reference it too.
 enum class TimeCategory { DAYS, WEEKS, MONTHS, NET_FREE_HOURS }
 
 /** A single ring's data: how much is left and how full the ring should be. */
@@ -202,7 +203,7 @@ interface WidgetConfigRepository {     // the catalog
     fun observe(configId: String): Flow<WidgetConfigRecord?>
     fun observeAll(): Flow<List<WidgetConfigRecord>>
     suspend fun save(config: WidgetConfigRecord)
-    suspend fun delete(configId: String)      // blocked/guarded if any binding references it
+    suspend fun delete(configId: String): DeleteConfigResult  // guarded; says *why* it refused
 }
 interface WidgetBindingRepository {    // placement -> config
     fun observeBinding(glanceId: String): Flow<WidgetInstanceBinding?>
@@ -215,6 +216,13 @@ interface ProfileRepository {
     suspend fun save(profile: ProfileRecord)
 }
 ```
+- `DeleteConfigResult` is a sealed type, not a boolean: the UI must be able to say *why* it
+  refused and which placed widgets are in the way.
+- `LifeClockStore` bundles both repositories over one storage file. `InMemoryLifeClockStore`
+  implements the same interface, so **one contract test suite runs against both** — the guard
+  cannot mean something different in tests than in production.
+- `ProfileRepository` lands in M3 with `:core:mortality`; M2 only persists configs and bindings.
+
 Widget state is never held in memory as truth — always recomposed from these flows.
 
 ### 3.1 Widget catalog & binding (feature D)

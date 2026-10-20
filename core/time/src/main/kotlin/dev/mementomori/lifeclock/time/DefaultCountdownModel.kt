@@ -1,5 +1,6 @@
 package dev.mementomori.lifeclock.time
 
+import dev.mementomori.lifeclock.model.TimeCategory
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -9,26 +10,11 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /**
- * T1.2–T1.8 — the four slice categories.
+ * The four slice categories.
  *
- * Every category shares three rules:
- *
- *  - **Clamp first.** A `now` before `start` is treated as `start`; a `now` after `end` is treated
- *    as `end`. A widget that was asleep for three days must not render a negative countdown.
- *  - **Display counts round up.** `remaining` is a `Long` in the category's own unit (10 days,
- *    2 weeks, 3 months, 120 free hours). Rounding up means the final day reads "1 day", not "0",
- *    and keeps the text consistent with the exact arc: 2.9 days left is "3 days" beside a 29% arc.
- *  - **The fraction is exact and shared.** `fractionRemaining` is computed once from the exact
- *    instants, so the four arcs of a `CONCENTRIC` widget can never disagree about elapsed time.
- *
- * Where the categories differ is only in *what a unit is*:
- *
- *  - [TimeCategory.DAYS] / [TimeCategory.WEEKS] are **elapsed** units (24 h, 7 × 24 h), so the
- *    result is identical in every time zone.
- *  - [TimeCategory.MONTHS] is a **calendar** count via [ChronoUnit.MONTHS] in the given zone,
- *    because a month has no fixed length and "Feb 28" only means something relative to a zone.
- *  - [TimeCategory.NET_FREE_HOURS] subtracts sleep and maintenance, so it is a budget rather
- *    than a duration. Without a [FreeTimePolicy] the category is absent from the result.
+ * Shared rules: clamp `now` into the target, round display counts **up**, compute the fraction
+ * once from the exact instants. Only the unit differs — days/weeks are elapsed (zone-free),
+ * months are calendar (needs `zone`), net-free hours subtract sleep and maintenance.
  */
 class DefaultCountdownModel(
     /** Required only for [TimeCategory.NET_FREE_HOURS]; the other categories ignore it. */
@@ -139,12 +125,8 @@ class DefaultCountdownModel(
     }
 
     /**
-     * Rounds up, ignoring floating-point noise just below an integer.
-     *
-     * Without the tolerance this is a real bug: 70 h with 8 h sleep/day and 25% maintenance is
-     * exactly 35 free hours, but IEEE arithmetic produces `35.00000000000001`, and a naive
-     * [ceil] reports 36. The tolerance is 1 ns of an hour — far below anything a human can see,
-     * far above the error of a few multiplications.
+     * Rounds up, ignoring float noise: 70 h with 8 h sleep/day and 25% maintenance is exactly 35,
+     * but IEEE gives `35.00000000000001` and a naive [ceil] reports 36.
      */
     private fun ceilHours(hours: Double): Long {
         if (hours <= 0.0) return 0

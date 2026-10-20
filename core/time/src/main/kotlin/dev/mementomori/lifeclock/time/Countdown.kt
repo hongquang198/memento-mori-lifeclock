@@ -1,28 +1,15 @@
 package dev.mementomori.lifeclock.time
 
+import dev.mementomori.lifeclock.model.TimeCategory
 import java.time.Instant
 import java.time.ZoneId
 
 /**
- * The four ways a countdown can be expressed. Each one is a separate arc.
+ * One arc's data.
  *
- * They are not four views of the same number: `DAYS` and `WEEKS` are elapsed-time units,
- * `MONTHS` is a calendar count (its length depends on the zone), and `NET_FREE_HOURS` is a
- * *budget* with sleep and maintenance removed.
- */
-enum class TimeCategory { DAYS, WEEKS, MONTHS, NET_FREE_HOURS }
-
-/**
- * One arc's data: how much is left and how full to draw it.
- *
- * [remaining] and [total] are **counts in [category]'s own unit**, not durations. A month has no
- * fixed length, so a `Duration` field would force a fake 30-day month on every caller; the
- * renderer only ever needs "3" and "DAYS", never date arithmetic.
- *
- * [remaining] is rounded **up**, so a countdown never reads "0 days" while time remains.
- * [fractionRemaining] is the **exact** ratio, clamped to `[0, 1]`, because the arc is redrawn far
- * less often than the text ticks and should not look frozen between ticks. It is the same for
- * every category: it describes elapsed time, not how that time is displayed.
+ * [remaining]/[total] are counts in [category]'s own unit (a month has no fixed length, so a
+ * Duration would be a lie). [remaining] rounds up; [fractionRemaining] is the exact ratio and is
+ * the same for every category.
  */
 data class TimeSlice(
     val category: TimeCategory,
