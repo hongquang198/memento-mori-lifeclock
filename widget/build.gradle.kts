@@ -35,4 +35,6 @@ dependencies {
     testImplementation(libs.junit4)
     testImplementation(libs.androidx.glance.appwidget.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Bitmap/Canvas are stubs on the JVM; Robolectric renders real pixels for the renderer tests.
+    testImplementation(libs.robolectric)
 }

@@ -320,14 +320,26 @@ sealed interface RingColor {       // config stores this; resolved before raster
 
 ### 4.3 Renderer
 ```kotlin
-interface RingRenderer {
-    fun render(style: RingStyle, fraction: Double): ImageBitmap   // Canvas.drawArc
+fun interface RingRenderer {
+    fun render(style: RingStyle, fraction: Double): Bitmap   // android.graphics.Bitmap
 }
 ```
-- `CanvasRingRenderer`: allocates a `Bitmap` of `diameterPx`, `drawArc` for track (full
-  360°) and progress (`sweep = 360 * fraction`), anti-aliased, round stroke caps.
-- **Caching:** LRU keyed by `(fractionBucket, diameterPx, strokeRatio, colors)` where
-  `fractionBucket` uses the widget's declared granularity, so identical frames are not redrawn.
+- `CanvasRingRenderer`: allocates a `Bitmap` of `diameterPx`; `drawCircle` for the track,
+  `drawArc(startAngleDeg, 360 × fraction)` for progress, anti-aliased, round caps. At
+  `fraction >= 1` progress is also a `drawCircle`, because a 360° arc seam double-draws its cap.
+  At `fraction <= 0` nothing is drawn, otherwise the round cap leaves a dot that reads as progress.
+- **Colour resolution:** `RingColor` (`Fixed` | `Theme`) is parsed from the config string and
+  resolved to `Int` **before** drawing, against a `ThemePalette` (Glance colours in production,
+  a map in tests). Unparseable values fall back instead of crashing a render.
+- `RingStyleResolver` is the single boundary from stored config to drawable: clamps
+  `strokeRatio` to `0.05..0.5`, converts dp→px, resolves both colours.
+- **Geometry** (`RingGeometry`) is Android-free: stroke width = `ratio × radius`, centreline
+  radius = `(diameter − stroke) / 2`, bounds inset by half the stroke, sweep = `360 × fraction`.
+- **Caching:** `CachedRingRenderer` decorates the renderer with an LRU keyed by
+  `(quantizedFraction, diameterPx, strokeRatio, fill, track, startAngle)`. The fraction is
+  quantized **before** drawing so a bucket always yields the same bitmap regardless of order.
+  The label is not in the key: it is a Glance `Text`, never baked into the bitmap, so styles
+  differing only by label share a frame.
 - **Glance path:** `ImageProvider(bitmap)`.
 - **Fallback path (raw `RemoteViews`):** `setImageViewBitmap` when Glance can't express a
   layout detail.

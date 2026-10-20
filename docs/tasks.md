@@ -79,10 +79,10 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 - [x] **T2.3** Tests: two bindings → one config; editing the config re-renders **both**; deleting a bound config is guarded; rebinding moves an instance.
 
 ### Ring rendering
-- [ ] **T2.4** Tests: `CanvasRingRenderer` — arc sweep ∝ fraction; stroke width; colors (golden/hash).
-- [ ] **T2.5** Impl: `RingRenderer` with LRU cache keyed by `(fractionBucket, diameter, strokeRatio, colors)`.
-- [ ] **T2.6** Tests: `RingColor.Theme` → concrete ARGB resolution; clamp `strokeRatio`.
-- [ ] **T2.7** Impl: color resolution + clamps.
+- [x] **T2.4** Tests: `CanvasRingRenderer` — arc sweep ∝ fraction; stroke width; colors (golden/hash).
+- [x] **T2.5** Impl: `RingRenderer` with LRU cache keyed by `(fractionBucket, diameter, strokeRatio, colors)`.
+- [x] **T2.6** Tests: `RingColor.Theme` → concrete ARGB resolution; clamp `strokeRatio`.
+- [x] **T2.7** Impl: color resolution + clamps.
 
 ### Widget composition
 - [ ] **T2.8** Tests (`runGlanceAppWidgetUnitTest`): widget composes ring + Chronometer for a config.
