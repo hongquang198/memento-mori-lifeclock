@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget's palette. `theme:<role>` in a stored config resolves against these names. -->
+<resources>
+    <color name="widget_primary">#E5484D</color>
+    <color name="widget_secondary">#6E56CF</color>
+    <color name="widget_outline">#2A2A2E</color>
+    <color name="widget_surface">#101014</color>
+    <color name="widget_on_surface">#E6E6E6</color>
+    <color name="widget_error">#DC3D43</color>
+    <!-- Last resort when a stored colour is neither hex nor a known role. -->
+    <color name="widget_fallback">#8B8B90</color>
+</resources>

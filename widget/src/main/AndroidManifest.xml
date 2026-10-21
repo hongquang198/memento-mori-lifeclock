@@ -22,6 +22,26 @@
             </intent-filter>
         </receiver>
 
+        <!-- The real widget. exported=true is required: the launcher is a different process and
+             must be able to send APPWIDGET_UPDATE. Unlike the spike, there is no extra
+             exported receiver for shell-driven refreshes. -->
+        <receiver
+            android:name="dev.mementomori.lifeclock.widget.CountdownWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- Glance's debug trigger, which (unlike APPWIDGET_UPDATE) is a normal action we
+                     may send over adb:
+                     adb shell am broadcast -a androidx.glance.appwidget.action.DEBUG_UPDATE -n ...
+                     TODO(M5): strip before release. -->
+                <action android:name="androidx.glance.appwidget.action.DEBUG_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/countdown_widget_info" />
+        </receiver>
+
         <receiver
             android:name="dev.mementomori.lifeclock.widget.SpikeRingWidgetReceiver"
             android:exported="true"

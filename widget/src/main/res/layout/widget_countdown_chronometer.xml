@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A single platform Chronometer. Once started it ticks itself: no code of ours runs. -->
+<Chronometer xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_chronometer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:paddingTop="6dp"
+    android:textColor="@color/widget_on_surface"
+    android:textSize="18sp" />

@@ -352,13 +352,29 @@ crisp, themeable, and accessible:
 - `NONE` → ring only.
 
 ### 4.5 Live numeric readout
-`RemoteViews` `Chronometer` with `setBase(end)` + `setCountDown(true)` — the platform ticks
-it with **no wakeups from us**.
+`RemoteViews` `Chronometer` embedded via `AndroidRemoteViews`, with `setBase(elapsedRealtime + remaining)`
+and `setCountDown(true)` — the platform ticks it with **no wakeups from us**. The base is recomputed on
+every render and never persisted: `elapsedRealtime` resets on reboot, which is exactly why the widget
+must refresh after `BOOT_COMPLETED`. Nesting a `RemoteViews` inside another is only verified from API 31
+up, so below that the widget renders ring + label and no live number
+(`ChronometerViews.canEmbed`).
 
-Widget composition (Glance) resolves: the bound `WidgetConfigRecord` from the repository + `slices` from
-`CountdownModel` → per-ring `RingStyle` → `RingColor` resolved to concrete color →
-`RingRenderer` → `ImageProvider`, arranged with a `Box`/`Column` per `LabelPlacement`, plus
-a `Chronometer` for the live countdown.
+### 4.6 Widget composition — the pure/Android seam
+```
+provideGlance (suspend, system-created)
+   └─ WidgetStateLoader            IO: binding -> config -> spec -> bitmaps + RemoteViews
+        ├─ WidgetSpecResolver      PURE: config + now -> rings[(style, fraction)], remainingMs
+        └─ RingStyleResolver       PURE: stored appearance -> drawable values
+   └─ provideContent { WidgetContent(state) }    PURE(UI): state -> Glance tree
+```
+- `WidgetSpecResolver` decides *what* to draw and is a plain JUnit test: no binding, no deadline,
+  `LIFE_CLOCK` before M3, and categories that produced no slice are all reachable without a host.
+- `WidgetContent` takes a finished `WidgetState`, so `runGlanceAppWidgetUnitTest` can compose it with
+  no DataStore, no repositories and no clock.
+- Theme colours resolve against the widget's own `res/values/colors.xml` (roles `primary`, `outline`,
+  …), not `GlanceTheme`: the bitmap is rasterized *before* composition, where `GlanceTheme.colors`
+  does not exist yet. Dynamic colour is therefore not applied to the bitmap — a known limitation.
+- The label is Glance `Text` for `INSIDE`/`UNDER` and omitted for `NONE`; the bitmap never contains text.
 
 ---
 
@@ -398,6 +414,12 @@ Rules:
 Workers obtain repositories via Hilt. `GlanceAppWidget` is instantiated by the system, so
 any dependencies it needs must be resolved through `EntryPointAccessors` (Glance has no
 constructor injection).
+
+**Current state (M2):** `:widget` declares a plain `WidgetDependencies` interface plus a
+`WidgetDependenciesHolder`; `:app` builds the graph by hand in `LifeClockGraph` and publishes it in
+`Application.onCreate`. This keeps Hilt and its annotation processor out of `:widget` entirely and
+lets widget tests construct the interface directly. When the config UI lands, `LifeClockGraph`
+becomes the `@EntryPoint` implementation and `:widget` does not change.
 
 ---
 

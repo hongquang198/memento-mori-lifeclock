@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget metadata read by the launcher.
+
+  - updatePeriodMillis = 0: we drive updates ourselves. The framework minimum is 30 minutes and
+    an update re-runs composition inside the broadcast budget, which is what M0 found failing.
+  - initialLayout: our designed still frame (see widget_initial.xml), not Glance's spinner.
+  - previewImage: shown in the widget picker, and a vector so it needs no density buckets.
+  - targetCellWidth/Height: preferred footprint on Android 12+.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_initial"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:previewImage="@drawable/widget_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

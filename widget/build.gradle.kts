@@ -15,6 +15,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true }
+
+    // Robolectric renders real pixels and needs the merged resources (colors, layouts) to do it.
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
 kotlin { jvmToolchain(17) }
@@ -27,6 +30,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    // Reading bindings/configs is suspend + Flow based; do not rely on Glance's transitive copy.
+    implementation(libs.kotlinx.coroutines.core)
 
     // M0 fix verification: the boot refresh must run outside a broadcast budget.
     implementation(libs.androidx.work.runtime.ktx)

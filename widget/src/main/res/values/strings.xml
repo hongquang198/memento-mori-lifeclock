@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_label">Memento Mori Countdown</string>
+    <string name="widget_description">A ring showing how much of a countdown is left.</string>
+    <string name="ring_content_description">Countdown ring</string>
+</resources>

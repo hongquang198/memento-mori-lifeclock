@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What the host paints before (or instead of) our composition.
+
+  M0 proved the default Glance loading layout can be the only thing a user ever sees: on a cold
+  start the broadcast budget expires, composition is cancelled, and with updatePeriodMillis=0
+  nothing retries. So this is a designed still frame, not a spinner: the widget's own ring shape,
+  drawn as a vector, which looks intentional either way.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        android:padding="12dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/widget_preview" />
+
+</FrameLayout>

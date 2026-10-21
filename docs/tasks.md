@@ -85,9 +85,9 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 - [x] **T2.7** Impl: color resolution + clamps.
 
 ### Widget composition
-- [ ] **T2.8** Tests (`runGlanceAppWidgetUnitTest`): widget composes ring + Chronometer for a config.
-- [ ] **T2.9** Impl: `CountdownWidget : GlanceAppWidget` + `GlanceAppWidgetReceiver`; `provideGlance` reads repo flow.
-- [ ] **T2.10** Impl: `CountdownWidget`'s static `previewImage` + `appwidget-provider` XML (`updatePeriodMillis` = 0).
+- [x] **T2.8** Tests (`runGlanceAppWidgetUnitTest`): widget composes ring + Chronometer for a config.
+- [x] **T2.9** Impl: `CountdownWidget : GlanceAppWidget` + `GlanceAppWidgetReceiver`; `provideGlance` reads repo flow.
+- [x] **T2.10** Impl: `CountdownWidget`'s static `previewImage` + `appwidget-provider` XML (`updatePeriodMillis` = 0).
 
 ### Scheduling
 - [ ] **T2.11** Tests: scheduling state machine transitions (IDLE→SCHEDULED→REFRESHED) with fake triggers.
@@ -100,6 +100,11 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 - [ ] **T2.16** Impl: `:widget` **picker** config Activity (`android:configure`) listing saved configs + "New"; `widgetFeatures="reconfigurable|configuration_optional"`; request initial `update` after binding.
 - [ ] **T2.17** Impl: widget tap action → reopen picker for that `glanceId` (pre-selected).
 - [ ] **T2.18** Instrumented: **survives reboot, timezone change, manual clock change** on a physical device.
+- **Carried into T2.15:** a config may hold N rings, but every ring shares one target and
+  `TimeSlice.fractionRemaining` is identical across categories, so N rings currently draw N
+  *identical* arcs. Decide what a second ring means (extra targets / a different ratio / pure
+  decoration) before templates seed multi-ring configs. `WidgetLayout` is also still unread:
+  `CONCENTRIC` needs one `Canvas` pass drawing N arcs, not N bitmaps.
 - **DoD:** a countdown widget stays correct across the three device events in T2.18; adding shows the picker and binds.
 
 ---

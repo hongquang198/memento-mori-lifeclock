@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The ring at 70%: the shape a user sees in the widget picker and in the initial layout.
+  Geometry matches RingGeometry at strokeRatio 0.2 on a 240 viewport (centreline r = 96).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+
+    <!-- Track: two semicircles, because a path cannot express a closed circle in one arc. -->
+    <path
+        android:pathData="M120,24 A96,96 0 1,0 120,216 A96,96 0 1,0 120,24"
+        android:strokeColor="@color/widget_outline"
+        android:strokeLineCap="round"
+        android:strokeWidth="20" />
+
+    <!-- Progress: 252 degrees clockwise from 12 o'clock. -->
+    <path
+        android:pathData="M120,24 A96,96 0 1,1 28.7,149.7"
+        android:strokeColor="@color/widget_primary"
+        android:strokeLineCap="round"
+        android:strokeWidth="20" />
+
+</vector>
