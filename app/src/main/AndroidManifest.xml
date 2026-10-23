@@ -17,18 +17,6 @@
             </intent-filter>
         </activity>
 
-        <!-- M0 spike (T0.4) only: measurement probe for Doze/alarm cadence.
-             exported=true so `adb shell am broadcast` can trigger it. Delete before M2. -->
-        <receiver
-            android:name=".spike.SpikeProbeReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="dev.mementomori.lifeclock.spike.SCHEDULE" />
-                <action android:name="dev.mementomori.lifeclock.spike.INEXACT" />
-                <action android:name="dev.mementomori.lifeclock.spike.EXACT" />
-            </intent-filter>
-        </receiver>
-
     </application>
 
 </manifest>

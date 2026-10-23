@@ -9,22 +9,26 @@
          Declaring the widget receiver here keeps the widget self-contained. -->
     <application>
 
-        <!-- M0 fix verification: the boot refresh.
-             `exported="false"` is correct and safer: BOOT_COMPLETED is a protected broadcast
-             delivered by the system (which bypasses the exported check), so no other app can
-             abuse this receiver. Not `directBootAware`, so it fires only after unlock, when
-             credential-encrypted storage (and therefore WorkManager) is available. -->
+        <!-- Everything that means "the widget may now be wrong": boot, a clock or timezone
+             change, a date rollover, an app upgrade, and the boundary alarm (an explicit intent,
+             which is delivered even though exported=false).
+             exported=false is safe because these are system broadcasts and the system is allowed
+             to reach a non-exported receiver; no other app can.
+             This receiver only enqueues WorkManager work - it never draws (see M0 findings §6). -->
         <receiver
-            android:name="dev.mementomori.lifeclock.widget.BootRefreshReceiver"
+            android:name="dev.mementomori.lifeclock.widget.WidgetRefreshReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 
-        <!-- The real widget. exported=true is required: the launcher is a different process and
-             must be able to send APPWIDGET_UPDATE. Unlike the spike, there is no extra
-             exported receiver for shell-driven refreshes. -->
+        <!-- The widget itself. exported=true is required: the launcher is a different process and
+             must be able to send APPWIDGET_UPDATE. -->
         <receiver
             android:name="dev.mementomori.lifeclock.widget.CountdownWidgetReceiver"
             android:exported="true"
@@ -40,35 +44,6 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/countdown_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name="dev.mementomori.lifeclock.widget.SpikeRingWidgetReceiver"
-            android:exported="true"
-            android:label="Spike Ring (M0)">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <!-- Glance's own debug trigger. Unlike android.appwidget.action.APPWIDGET_UPDATE
-                     (protected), this one is a normal action we can send over adb:
-                     adb shell am broadcast -a androidx.glance.appwidget.action.DEBUG_UPDATE -n ...
-                     Glance then enumerates the widget ids itself and calls onUpdate.
-                     DEBUG BUILDS ONLY: must be removed before release. -->
-                <action android:name="androidx.glance.appwidget.action.DEBUG_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/spike_ring_widget_info" />
-        </receiver>
-
-        <!-- M0 spike (T0.4) only: lets us drive a refresh from the shell, because the real
-             `android.appwidget.action.APPWIDGET_UPDATE` is a protected broadcast that neither
-             an app nor adb may send. Delete before M2. -->
-        <receiver
-            android:name="dev.mementomori.lifeclock.widget.SpikeRefreshReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="dev.mementomori.lifeclock.spike.REFRESH" />
-            </intent-filter>
         </receiver>
 
     </application>

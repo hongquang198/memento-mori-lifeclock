@@ -20,20 +20,31 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dagger.hilt.android.AndroidEntryPoint
-import dev.mementomori.lifeclock.widget.renderSpikeRing
+import dev.mementomori.lifeclock.widget.ring.CanvasRingRenderer
+import dev.mementomori.lifeclock.widget.ring.RingStyle
 
 /**
- * M0 spike host. Shows, on a real device, the two mechanisms the architecture depends on:
- *  - the **determinate ring bitmap** (drawn here the same way the widget draws it), and
- *  - a **Chronometer** counting down on its own.
+ * A preview of the two mechanisms the widget is built on: a ring drawn as a real bitmap, and a
+ * `Chronometer` counting down on its own.
  *
- * This screen is throwaway; the real app UI arrives in M2/M4.
+ * The real settings UI arrives with the config Activity (T2.15); until then this screen is how
+ * the drawing is checked without placing a widget.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val ring = renderSpikeRing(fraction = 0.73f).asImageBitmap()
+        val ring = CanvasRingRenderer()
+            .render(
+                RingStyle(
+                    diameterPx = 240,
+                    strokeRatio = 0.12,
+                    color = 0xFFE5484D.toInt(),
+                    trackColor = 0xFF2A2A2E.toInt(),
+                ),
+                fraction = 0.73,
+            )
+            .asImageBitmap()
 
         setContent {
             MaterialTheme {
@@ -45,11 +56,11 @@ class MainActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
                     ) {
-                        Text("M0 spike — determinate ring + live Chronometer")
+                        Text("Ring preview — 73%")
 
                         Image(
                             bitmap = ring,
-                            contentDescription = "determinate ring, 73%",
+                            contentDescription = "progress ring at 73%",
                             modifier = Modifier.size(240.dp),
                         )
 

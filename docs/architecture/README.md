@@ -23,8 +23,11 @@ What it shows, in the order things actually run:
 
 `candidate.json` is the editable source of truth; the HTML is generated from it. Components
 marked as probe code (`SpikeRingWidget*`, `SpikeRing.kt`, `SpikeRefreshReceiver`,
-`SpikeProbeReceiver`, `BootRefreshReceiver`, `RefreshWidgetsWorker`) are the M0 spike, are
-deleted before M2, and are **not** the target architecture.
+`SpikeProbeReceiver`, `BootRefreshReceiver`, `RefreshWidgetsWorker`) are the M0 spike. They were
+deleted in T2.11–T2.14; the production equivalents are `CountdownWidget`,
+`CanvasRingRenderer`, `WidgetRefreshReceiver`, `WidgetRefreshScheduler` and
+`CountdownRefreshWorker`. The HTML still describes the spike on purpose: it is the evidence for
+the M0 diagnosis, not a picture of the current tree.
 
 Regenerate from the repo root (`review-4` is the run that produced the committed HTML; a rerun
 needs a fresh `--out-dir`, because the delivered HTML owns the evidence taken from its bytes):

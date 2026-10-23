@@ -15,14 +15,14 @@ Strict dependency direction: **inner layers never know about outer layers.** And
 frameworks only appear in the outer modules.
 
 ```
-:app            (Compose app: widget catalog, editor, instance manager, Hilt, Manifest)
-  ├─ :feature:config   (widget catalog + per-widget editor + "Your widgets" manager)
-  ├─ :widget           (GlanceAppWidget, RemoteViews ring, Chronometer, receivers)
-  ├─ :core:data        (DataStore, repositories)
-  └─ :core:scheduler   (WorkManager workers, boundary alarms, boot/time receivers)
-        └─ :core:mortality   (pure Kotlin life-stat engine)   ─┐
-        └─ :core:time        (pure Kotlin countdown engine)   ─┼─ no Android deps
-        └─ :core:model       (shared value types, Citation)   ─┘
+:app                  (Compose app: widget catalog, editor, instance manager, Hilt, Manifest)
+  ├─ :feature:config  (widget catalog + per-widget editor + "Your widgets" manager)
+  ├─ :widget          (Glance widget, ring bitmap, Chronometer, refresh worker + receivers)
+  └─ :core:data       (DataStore, repositories)
+
+:core:scheduler  → :core:model   (pure: when a widget is due, and when to wake up)
+:core:mortality  → :core:model   (pure: life-stat engine)
+:core:time       → :core:model   (pure: countdown engine)
 ```
 
 | Module | Responsibility (SRP) | Depends on |
@@ -31,8 +31,8 @@ frameworks only appear in the outer modules.
 | `:core:time` | Countdown decomposition (days/weeks/months/net-free-hours). | `:core:model` |
 | `:core:mortality` | Life-table + ATUS math, citation-bound stats. | `:core:model` |
 | `:core:data` | Persistence of widget configs, instance bindings & profile. | `:core:model` |
-| `:core:scheduler` | When/how to refresh widgets. | `:core:data` |
-| `:widget` | How a widget is drawn (ring bitmap + Chronometer); binding-picker activity. | `:core:*` |
+| `:core:scheduler` | **When** a widget is due: boundary instants + the `IDLE → SCHEDULED → REFRESHED` cycle. Pure. | `:core:model` |
+| `:widget` | How a widget is drawn (ring bitmap + Chronometer) **and what wakes it up** (WorkManager, boundary alarm, receivers). | `:core:*` |
 | `:feature:config` | Widget **catalog** (create/name/edit reusable configs), editor with **live preview**, and the "Your widgets" instance manager. | `:core:*` |
 | `:app` | Wiring, DI, manifest. | all |
 
@@ -378,27 +378,42 @@ provideGlance (suspend, system-created)
 
 ---
 
-## 5. Scheduling state machine (`:core:scheduler`)
+## 5. Scheduling (`:core:scheduler` + the refresh mechanism in `:widget`)
 
-States per widget instance: **`IDLE → SCHEDULED → REFRESHED`**.
+States per widget instance: **`IDLE → SCHEDULED → REFRESHED → SCHEDULED`**, where `REFRESHED`
+means "a redraw is owed right now" and settling it returns to `SCHEDULED` at the next boundary.
+
+**Why the behaviour is split across two modules.** `:core:scheduler` decides *when*
+(`RefreshBoundaries`, `RefreshCycle`) and is pure Kotlin. The thing that does the waking —
+`WorkManager`, `AlarmManager`, broadcast receivers — has to call `CountdownWidget().updateAll()`,
+so it lives in `:widget`. Putting it in `:core:scheduler` would make a core module depend on a
+feature module (and on Glance); the dependency arrow only ever points `:widget → :core:*`.
 
 | Trigger | Source | Action |
 |---|---|---|
-| `onUpdate` (≥30 min) | framework | recompute → refresh ring + reset Chronometer base |
-| `onEnabled` / `onDisabled` | framework | start/stop unique `WorkManager` refresh |
-| `onDeleted` | framework | `unbind(glanceId)` (the `WidgetConfigRecord` persists) |
-| `onAppWidgetOptionsChanged` | framework (resize) | re-rasterize for new size |
+| `onUpdate` | framework | Glance composes and draws (unchanged; see the M0 caveat below) |
+| `onEnabled` | framework | `ensurePeriodic()` + forced refresh; starts the ≥15 min heartbeat |
+| `onDisabled` | framework | cancel the heartbeat and the boundary alarm |
+| `onDeleted` | framework | `unbind(glanceId)` in a worker (the `WidgetConfigRecord` persists) |
 | config edited (app) | `:feature:config` | `GlanceAppWidget.update()` for **every** bound `glanceId` |
 | config deleted (app) | `:feature:config` | guard: block if bound, else unbind all + delete |
-| Periodic (≥15 min) | `WorkManager` unique work | recompute; refresh only if ring bucket changed |
-| Boundary alarm | `setAndAllowWhileIdle` (inexact) | refresh at next midnight/hour |
-| `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED` | system | reschedule all + refresh all |
+| Periodic (15 min) | `WorkManager` unique work | `RefreshGate.decide()`; redraws only when due |
+| Boundary | `setAndAllowWhileIdle` (inexact) | redraw at the next midnight / hour / 6-hour slot |
+| `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED`, `MY_PACKAGE_REPLACED` | system | enqueue one **forced** refresh (boot also re-arms the heartbeat) |
 
 Rules:
-- **No exact alarms** (avoids `SCHEDULE_EXACT_ALARM` on API 31+ and battery cost).
-- Ring refreshes are gated by `RefreshIntent` granularity; Chronometer text is left to tick
-  itself. This is the core battery-honesty mechanism.
-- Every refresh is idempotent and derives from persisted state (survives process death).
+- **No exact alarms** (avoids `SCHEDULE_EXACT_ALARM` on API 31+ and the battery cost of waking
+  for a widget that is a few minutes late anyway).
+- Receivers never draw. They enqueue `CountdownRefreshWorker`; M0 measured that drawing inside a
+  receiver loses the `goAsync` race on a cold start and strands the widget on its placeholder.
+- `RefreshIntent` gates the ring redraw per config, not globally: an hourly widget and a daily
+  widget bound at the same time produce one wakeup at the earlier boundary, and the daily one
+  simply is not due.
+- The cycle lives in memory (`ProcessRefreshGate`), not in storage. A process restart therefore
+  redraws once; that is cheaper and safer than persisting a timestamp that must survive clock and
+  timezone edits.
+- Each redraw is idempotent and derives from persisted state, so any missed wakeup is repaired by
+  the next one.
 
 ---
 
@@ -416,9 +431,9 @@ any dependencies it needs must be resolved through `EntryPointAccessors` (Glance
 constructor injection).
 
 **Current state (M2):** `:widget` declares a plain `WidgetDependencies` interface plus a
-`WidgetDependenciesHolder`; `:app` builds the graph by hand in `LifeClockGraph` and publishes it in
-`Application.onCreate`. This keeps Hilt and its annotation processor out of `:widget` entirely and
-lets widget tests construct the interface directly. When the config UI lands, `LifeClockGraph`
+`WidgetDependenciesHolder`; `:app` builds the graph by hand in `AppDependencies` and publishes it
+in `Application.onCreate`. This keeps Hilt and its annotation processor out of `:widget` entirely
+and lets widget tests construct the interface directly. When the config UI lands, `AppDependencies`
 becomes the `@EntryPoint` implementation and `:widget` does not change.
 
 ---

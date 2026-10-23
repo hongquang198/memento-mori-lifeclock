@@ -3,6 +3,9 @@
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
+# Kotlin language server output
+bin/
+
 # Machine-specific (contains absolute SDK path)
 local.properties
 

@@ -1,8 +1,8 @@
 # M0 — Platform de-risk spike: findings
 
-**Status:** complete; the boot failure is root-caused (§6) *and* fix-verified by a controlled A/B
-(§9). Three residual items remain, none of them design-blocking
-(see [Residual blockers](#residual-blockers)).
+**Status:** **closed 2026-10-23** — milestone gate passed 8/8 (`docs/concepts.md`). The boot
+failure is root-caused (§6) *and* fix-verified by a controlled A/B (§9). Three residual items are
+carried into M2, none of them design-blocking (see [Residual blockers](#residual-blockers)).
 **Device:** Pixel 8a (`akita`), Android 16 / SDK 36, app `targetSdk 35`, debug (debuggable) build.
 **Libraries:** Jetpack Glance 1.1.1, Kotlin 2.0.21.
 **Method:** every claim below comes from a measurement on the physical device, not from documentation.
@@ -226,12 +226,21 @@ The tempting fix is "add a `BOOT_COMPLETED` receiver that calls `updateAll()`". 
 **also a broadcast**, so it inherits the same `goAsync` budget and races the same cold start. It
 would look right and fail intermittently — the worst kind of fix.
 
-Glance *does* ship the correct escape hatch: `shouldLaunchAsyncRequestWorker()`, which runs the
-update in a `WorkManager` worker instead of `goAsync` ("*useful if your broadcast receiver
-frequently times out*"), and `maybeLaunchAsyncRequestWorker` already forces that path on vivo
-devices because "goAsync is broken on certain OEMs". **But `javap` on the pinned 1.1.1 AAR shows
-1.1.1 has neither `shouldLaunchAsyncRequestWorker` nor `AsyncRequestWorker`** — that landed later.
-On 1.1.1 the escape hatch has to be ours.
+Glance *does* have the correct escape hatch upstream: `shouldLaunchAsyncRequestWorker()`, an
+`@ExperimentalGlanceApi protected open fun Boolean` on `GlanceAppWidgetReceiver` that routes the
+update through `AsyncRequestWorker` instead of `goAsync`:
+
+```kotlin
+override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+    val handled = maybeLaunchAsyncRequestWorker(context, shouldLaunchAsyncRequestWorker()) { ... }
+    if (!handled) goAsync(coroutineContext) { doUpdate(context, appWidgetIds) }
+}
+```
+
+Source: `glance/glance-appwidget/src/main/java/androidx/glance/appwidget/GlanceAppWidgetReceiver.kt`
+on `androidx-main`. **`javap` on the pinned 1.1.1 AAR shows 1.1.1 has neither
+`shouldLaunchAsyncRequestWorker` nor `AsyncRequestWorker`** (grep over its `classes.jar`: zero
+hits) — it landed after 1.1.1. On our pin the escape hatch has to be ours.
 
 **Consequence for the design (new requirement).** The boot refresh must run somewhere with a real
 execution budget, not in a broadcast:

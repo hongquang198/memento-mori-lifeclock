@@ -1,28 +1,21 @@
-// :core:scheduler — WHEN/HOW widgets refresh (WorkManager + boundary alarms + receivers).
-// Depends on :core:data so it can read which widgets exist; knows nothing about drawing.
+// :core:scheduler — WHEN a widget needs redrawing: refresh granularity and the next boundary
+// instant (midnight, hour, ...). Pure Kotlin: no Android, no WorkManager, no clocks.
+// The Android side (WorkManager, AlarmManager, broadcast receivers) lives in :widget, because it
+// has to call Glance to redraw — and :core must never depend on :widget.
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    `java-library`
+    alias(libs.plugins.kotlin.jvm)
 }
 
-android {
-    namespace = "dev.mementomori.lifeclock.core.scheduler"
-    compileSdk = 35
-    defaultConfig { minSdk = 26 }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+kotlin {
+    jvmToolchain(17)
 }
-
-kotlin { jvmToolchain(17) }
 
 dependencies {
-    api(project(":core:data"))
-    implementation(libs.androidx.work.runtime.ktx)
+    api(project(":core:model"))
 
-    testImplementation(libs.junit4)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.core)
-    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotest.assertions.core)
 }
+
+tasks.withType<Test>().configureEach { useJUnitPlatform() }

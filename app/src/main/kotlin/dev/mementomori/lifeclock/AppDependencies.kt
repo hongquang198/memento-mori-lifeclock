@@ -11,13 +11,13 @@ import dev.mementomori.lifeclock.widget.WidgetDependencies
 import java.time.ZoneId
 
 /**
- * Builds the object graph the widget layer needs.
+ * Builds the objects the widget layer needs.
  *
- * Deliberately hand-wired, not Hilt: the widget receiver is instantiated by the system, so the
- * graph is published once through `WidgetDependenciesHolder`. When the config UI lands this
- * becomes an `@EntryPoint`, and nothing in `:widget` has to change.
+ * Hand-written on purpose. The system creates the widget receiver itself, so nothing can be
+ * passed into its constructor; the objects are parked in `WidgetDependenciesHolder` instead.
+ * When the config screen lands this becomes a Hilt `@EntryPoint`, and `:widget` does not change.
  */
-object LifeClockGraph {
+object AppDependencies {
 
     fun from(context: Context): WidgetDependencies {
         val store = LifeClockStoreFactory.create(context.applicationContext)

@@ -5,20 +5,20 @@ import dagger.hilt.android.HiltAndroidApp
 import dev.mementomori.lifeclock.widget.WidgetDependenciesHolder
 
 /**
- * The application entry point.
+ * Process-wide setup.
  *
- * `@HiltAndroidApp` tells Hilt to generate the dependency-injection container that lives
- * for the whole process. Everything injected anywhere in the app (view models, workers)
- * ultimately comes from here.
+ * `@HiltAndroidApp` is what makes Hilt build the injector for this app: any class with
+ * `@AndroidEntryPoint` or `@HiltWorker` gets its fields filled from here.
  *
- * The widget cannot be constructor-injected: the system creates its receiver. So the graph it
- * needs is published before any receiver can run, which is what `onCreate` guarantees.
+ * `onCreate` runs before every activity, service and broadcast receiver in this process, so it
+ * is the first place the widget's dependencies can be published. Widget receivers get no
+ * constructor arguments, so this holder is how they find the repositories and the clock.
  */
 @HiltAndroidApp
 class LifeClockApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        WidgetDependenciesHolder.current = LifeClockGraph.from(this)
+        WidgetDependenciesHolder.current = AppDependencies.from(this)
     }
 }
