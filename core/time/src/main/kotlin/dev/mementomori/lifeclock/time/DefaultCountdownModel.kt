@@ -5,7 +5,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -81,8 +80,9 @@ class DefaultCountdownModel(
     /**
      * Rounds **up** to the nearest multiple of [unit].
      *
-     * Integer arithmetic, deliberately: `ceil(d / unit)` on doubles can turn a value that is
-     * exactly N units into N+1 through floating-point representation.
+     * Integer arithmetic, deliberately: `ceil(d / unit)` on doubles would convert both operands
+     * and trust the quotient to be exact, while here the boundary case is decided by `%` — exact
+     * by construction, for any unit, without a representation to reason about.
      */
     private fun ceilTo(span: Duration, unit: Duration): Long {
         val unitMillis = unit.toMillis()
@@ -125,13 +125,15 @@ class DefaultCountdownModel(
     }
 
     /**
-     * Rounds up, ignoring float noise: 70 h with 8 h sleep/day and 25% maintenance is exactly 35,
-     * but IEEE gives `35.00000000000001` and a naive [ceil] reports 36.
+     * Rounds up, ignoring float noise: 1000 min with no sleep and 10% maintenance is exactly 15 h,
+     * but IEEE gives `15.000000000000002` and a naive [ceil] reports 16.
+     *
+     * One absolute epsilon is enough: a life clock tops out around 10^6 hours, where a double's
+     * spacing is ~10^-10 — below the epsilon, so scaled noise never escapes it.
      */
     private fun ceilHours(hours: Double): Long {
         if (hours <= 0.0) return 0
-        val tolerance = max(ABS_HOURS_TOLERANCE, abs(hours) * RELATIVE_HOURS_TOLERANCE)
-        return ceil(hours - tolerance).toLong()
+        return ceil(hours - HOURS_EPSILON).toLong()
     }
 
     /**
@@ -153,8 +155,7 @@ class DefaultCountdownModel(
         const val MINUTES_PER_HOUR = 60.0
         const val MINUTES_PER_DAY = 1440.0
 
-        /** One nanosecond expressed in hours. */
-        const val ABS_HOURS_TOLERANCE = 1e-9
-        const val RELATIVE_HOURS_TOLERANCE = 1e-12
+        /** Absorbs IEEE noise in the free-hour ratio; see [ceilHours]. */
+        const val HOURS_EPSILON = 1e-9
     }
 }
