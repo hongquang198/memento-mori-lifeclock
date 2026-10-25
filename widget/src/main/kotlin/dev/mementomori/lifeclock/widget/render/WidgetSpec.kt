@@ -1,4 +1,4 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.render
 
 import dev.mementomori.lifeclock.model.RingConfigRecord
 import dev.mementomori.lifeclock.model.WidgetConfigRecord

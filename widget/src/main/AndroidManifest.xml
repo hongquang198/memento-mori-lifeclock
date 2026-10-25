@@ -16,7 +16,7 @@
              to reach a non-exported receiver; no other app can.
              This receiver only enqueues WorkManager work - it never draws (see M0 findings §6). -->
         <receiver
-            android:name="dev.mementomori.lifeclock.widget.WidgetRefreshReceiver"
+            android:name="dev.mementomori.lifeclock.widget.refresh.WidgetRefreshReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -32,7 +32,9 @@
         <receiver
             android:name="dev.mementomori.lifeclock.widget.CountdownWidgetReceiver"
             android:exported="true"
-            android:label="@string/widget_label">
+            android:label="@string/widget_label"
+            android:configure="dev.mementomori.lifeclock.widget.config.ConfigActivity"
+            android:widgetFeatures="reconfigurable">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <!-- Glance's debug trigger, which (unlike APPWIDGET_UPDATE) is a normal action we
@@ -45,6 +47,19 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/countdown_widget_info" />
         </receiver>
+
+        <!-- The picker. The launcher starts it after a placement and, because the receiver is
+             `reconfigurable`, again when the user taps a placed widget.
+             exported=true is required: the launcher runs in another process and starts it for us. -->
+        <activity
+            android:name="dev.mementomori.lifeclock.widget.config.ConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="@string/config_picker_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
 
     </application>
 

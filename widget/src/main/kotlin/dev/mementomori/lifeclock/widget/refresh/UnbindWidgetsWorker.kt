@@ -1,4 +1,4 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.refresh
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -8,6 +8,8 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import kotlinx.coroutines.CancellationException
+import dev.mementomori.lifeclock.widget.WidgetDependenciesHolder
+import dev.mementomori.lifeclock.widget.WidgetLog
 
 /**
  * Drops the bindings of widgets the user removed.

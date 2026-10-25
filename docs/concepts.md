@@ -47,10 +47,33 @@ Asked when M0 is closed, since M1 was built before this rule existed.
 
 ## M2 — widget, renderer, scheduling
 
-Asked at the end of M2 (after T2.15–T2.18), before the milestone is marked done.
+### M2a — prerequisite gate (asked before T2.15)
+
+Five questions on what the config Activity is about to build on. Passing this does **not** close M2.
 
 | # | Concept | Verdict | What I had wrong / what to remember |
 |---|---|---|---|
-| — | *questions pending* | | |
+| 1 | config vs binding | ✅ | Edit propagates to every widget bound to that `configId` on its next render — no per-instance overrides. Delete is refused (`BlockedByBindings`) until the last binding goes. |
+| 2 | one store for configs + bindings | ✅ | The failure to avoid is a **dangling binding**: a `bind()` landing between `delete()`'s check and its write would survive a config that no longer exists. |
+| 3 | why the ring is a `Bitmap` | ✅ | `RemoteViews` is a closed set of views with **no `Canvas`**; and a widget frame is a still image, so it could not animate even with a perfect drawing API. |
+| 4 | the ring cache key | ✅ | Label excluded (the bitmap is only the ring). 120 buckets = **3° steps**; 120 is the key alphabet, 32 is the capacity — not a multiplier. Unquantized, a `Double` key never repeats and a 32-slot LRU hits ~0 %. |
+| 5 | `tick()` as one atomic step | ✅ | Split API is read-then-act: two workers both read `due` → same boundary drawn twice. On failure the state stays `REFRESHED`, so it retries — and because `tick` throws before `armBoundary`, that retry waits for the heartbeat (recorded as an open item). |
+
+**Status: closed** — 5/5. The cache itself is still unproven; that stays an open question, separate from the bucket arithmetic.
+
+### End-of-M2 gate
+
+Asked after T2.15–T2.18, before the milestone is marked done.
+
+| # | Concept | Verdict | What I had wrong / what to remember |
+|---|---|---|---|
+| 1 | the silent no-op: what "success" meant at each layer | ✅ | Closed on the third pass. `updateAll()` returns when its loop finishes; over zero ids that is zero work and zero errors. The registry is Glance's **cache**, written by the same `onUpdate` M0 measured losing — so the *rescue* (boot receiver) read the same stale cache and rescued nothing. The gate's `drew=true` reported our decision, never the launcher's receipt. |
+| 2 | why the picker binds and the worker draws | ✅ | Picker owns *which config*; the worker owns *when to draw* and outlives the finishing Activity. |
+| 3 | `configuration_optional` | ✅ | The flag makes placement without configuration legal; the launcher took it literally, no `bind()` was ever written, and `initialLayout` became permanent. Kept apart from the tap-intent decision — **placement ≠ reconfiguration**. OEM claim dropped: unmeasured. |
+| 4 | why the ring cap lives in render | ✅ | One config, many cells. The cell is per-instance, so the cap cannot live in the config; rewriting the stored diameter destroys intent, and lowering the default only fixes one launcher. |
+| 5 | `directBootAware` and what unlock guarantees | ✅ | Accepted cost, stated correctly: a real frame **within 15 minutes of unlock, from whichever trigger fires first** — measured: the heartbeat, not `BOOT_COMPLETED`. Locked boot would need a second config-free renderer for a 15-minute window. |
+| 6 | why 81 green tests missed both device defects | ✅ | Closed after two corrections. The suite asserted on **our own output** — strings, fractions, the `RemoteViews` we composed. A widget appears when the **launcher** receives a `RemoteViews` for a placed `appWidgetId` and renders it; that receipt was never asserted. Same shape as `drew=true`: our side of the boundary reporting on itself. |
+
+**Status: closed** — 6/6 (2026-10-25). The sentence to carry forward: *assert at the boundary that observes the outside world — a function returning is not an effect.*
 
 ## M3+ — not reached yet

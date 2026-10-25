@@ -1,4 +1,6 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.content
+
+import dev.mementomori.lifeclock.widget.R
 
 import android.content.Context
 import android.widget.RemoteViews

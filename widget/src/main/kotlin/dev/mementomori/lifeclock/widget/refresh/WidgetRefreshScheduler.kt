@@ -1,4 +1,4 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.refresh
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -81,8 +81,8 @@ class WidgetRefreshScheduler(private val context: Context) {
         /** WorkManager's minimum periodic interval. Lower values are silently raised to it. */
         const val PERIODIC_MINUTES = 15L
 
-        private const val UNIQUE_PERIODIC = "lifeclock-periodic-refresh"
-        private const val UNIQUE_IMMEDIATE = "lifeclock-immediate-refresh"
+        internal const val UNIQUE_PERIODIC = "lifeclock-periodic-refresh"
+        internal const val UNIQUE_IMMEDIATE = "lifeclock-immediate-refresh"
         private const val REASON_PERIODIC = "periodic"
         const val KEY_REASON = "reason"
         const val KEY_FORCE = "force"

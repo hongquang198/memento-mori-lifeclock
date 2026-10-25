@@ -1,4 +1,4 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.refresh
 
 import dev.mementomori.lifeclock.model.RefreshIntent
 import dev.mementomori.lifeclock.scheduler.RefreshBoundaries
@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
+import dev.mementomori.lifeclock.widget.WidgetDependencies
+import dev.mementomori.lifeclock.widget.WidgetDependenciesHolder
 
 /**
  * Decides, at a given instant, whether the widgets owe a redraw and when to wake up next.

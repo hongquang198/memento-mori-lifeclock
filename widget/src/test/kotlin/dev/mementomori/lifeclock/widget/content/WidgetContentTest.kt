@@ -1,4 +1,6 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.content
+
+import dev.mementomori.lifeclock.widget.R
 
 import android.graphics.Bitmap
 import android.view.LayoutInflater
@@ -13,6 +15,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import dev.mementomori.lifeclock.widget.render.RenderedRing
+import dev.mementomori.lifeclock.widget.render.WidgetState
 
 /**
  * T2.8 - the composition itself, driven through Glance's own test harness rather than by

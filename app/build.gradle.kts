@@ -50,7 +50,6 @@ dependencies {
     implementation(project(":core:scheduler"))
     // Outer layers
     implementation(project(":widget"))
-    implementation(project(":feature:config"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

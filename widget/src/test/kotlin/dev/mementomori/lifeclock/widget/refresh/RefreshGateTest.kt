@@ -1,12 +1,10 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.refresh
 
 import dev.mementomori.lifeclock.data.InMemoryLifeClockStore
 import dev.mementomori.lifeclock.data.LifeClockStore
 import dev.mementomori.lifeclock.model.RefreshIntent
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
-import dev.mementomori.lifeclock.time.Clock
-import dev.mementomori.lifeclock.time.DefaultCountdownModel
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,24 +12,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
-import java.time.ZoneId
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import dev.mementomori.lifeclock.widget.TestDependencies
 
 private val NOON: Instant = Instant.parse("2026-06-15T12:00:00Z")
 private val NEXT_MIDNIGHT: Instant = Instant.parse("2026-06-16T00:00:00Z")
 private val NEXT_HOUR: Instant = Instant.parse("2026-06-15T13:00:00Z")
-
-private class FakeDependencies(
-    store: LifeClockStore,
-    override val zone: ZoneId = ZoneId.of("UTC"),
-) : WidgetDependencies {
-    override val configs = store.configs
-    override val bindings = store.bindings
-    override val countdownModel = DefaultCountdownModel()
-    override val clock = Clock { NOON }
-}
 
 private suspend fun LifeClockStore.bindCountdown(configId: String, intent: RefreshIntent) {
     configs.save(
@@ -58,7 +46,7 @@ class RefreshGateTest {
 
     @Test
     fun `nothing placed means nothing to render and no wakeup`() = runBlocking {
-        val gate = RefreshGate(FakeDependencies(InMemoryLifeClockStore()))
+        val gate = RefreshGate(TestDependencies(InMemoryLifeClockStore()))
         var draws = 0
 
         val decision = gate.tick(NOON, force = false) { draws++ }
@@ -71,7 +59,7 @@ class RefreshGateTest {
     @Test
     fun `the first tick in a fresh process draws`() = runBlocking {
         val store = InMemoryLifeClockStore().apply { bindCountdown("daily", RefreshIntent.DAILY) }
-        val gate = RefreshGate(FakeDependencies(store))
+        val gate = RefreshGate(TestDependencies(store))
         var draws = 0
 
         val decision = gate.tick(NOON, force = false) { draws++ }
@@ -84,7 +72,7 @@ class RefreshGateTest {
     @Test
     fun `a tick inside the same day does not draw again`() = runBlocking {
         val store = InMemoryLifeClockStore().apply { bindCountdown("daily", RefreshIntent.DAILY) }
-        val gate = RefreshGate(FakeDependencies(store))
+        val gate = RefreshGate(TestDependencies(store))
         var draws = 0
 
         gate.tick(NOON, force = false) { draws++ }
@@ -97,7 +85,7 @@ class RefreshGateTest {
     @Test
     fun `reaching the boundary draws once`() = runBlocking {
         val store = InMemoryLifeClockStore().apply { bindCountdown("daily", RefreshIntent.DAILY) }
-        val gate = RefreshGate(FakeDependencies(store))
+        val gate = RefreshGate(TestDependencies(store))
         var draws = 0
 
         gate.tick(NOON, force = false) { draws++ }
@@ -126,7 +114,7 @@ class RefreshGateTest {
         )
         store.bindings.bind("daily-widget", "daily")
 
-        val gate = RefreshGate(FakeDependencies(store))
+        val gate = RefreshGate(TestDependencies(store))
 
         assertEquals(NEXT_HOUR, gate.tick(NOON, force = false) {}.nextAt)
 
@@ -137,7 +125,7 @@ class RefreshGateTest {
     @Test
     fun `force draws even when the boundary has not moved`() = runBlocking {
         val store = InMemoryLifeClockStore().apply { bindCountdown("daily", RefreshIntent.DAILY) }
-        val gate = RefreshGate(FakeDependencies(store))
+        val gate = RefreshGate(TestDependencies(store))
         var draws = 0
 
         gate.tick(NOON, force = false) { draws++ }
@@ -150,7 +138,7 @@ class RefreshGateTest {
     @Test
     fun `a failed draw stays due, so the next tick retries`() = runBlocking {
         val store = InMemoryLifeClockStore().apply { bindCountdown("daily", RefreshIntent.DAILY) }
-        val gate = RefreshGate(FakeDependencies(store))
+        val gate = RefreshGate(TestDependencies(store))
         gate.tick(NOON, force = false) {}
 
         runCatching { gate.tick(NEXT_MIDNIGHT, force = false) { throw IllegalStateException("no RemoteViews") } }
@@ -163,7 +151,7 @@ class RefreshGateTest {
 
     @Test
     fun `concurrent callers all receive the same gate`() {
-        val dependencies = FakeDependencies(InMemoryLifeClockStore())
+        val dependencies = TestDependencies(InMemoryLifeClockStore())
         val pool = Executors.newFixedThreadPool(4)
         try {
             val start = CountDownLatch(1)

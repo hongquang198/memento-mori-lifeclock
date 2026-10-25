@@ -31,6 +31,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    // The config Activity is a plain View screen; `ComponentActivity` is only wanted for
+    // `lifecycleScope`, so the coroutine dies with the screen instead of leaking a thread.
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
     // Reading bindings/configs is suspend + Flow based; do not rely on Glance's transitive copy.
     implementation(libs.kotlinx.coroutines.core)
 
@@ -43,4 +47,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     // Bitmap/Canvas are stubs on the JVM; Robolectric renders real pixels for the renderer tests.
     testImplementation(libs.robolectric)
+    // ActivityScenario/ApplicationProvider for the config-Activity result contract.
+    testImplementation(libs.androidx.test.core)
+    // The picker enqueues a refresh; the real WorkManager cannot be used from a JVM test.
+    testImplementation(libs.androidx.work.testing)
 }

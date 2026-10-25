@@ -1,4 +1,4 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.render
 
 import android.graphics.Bitmap
 import android.widget.RemoteViews

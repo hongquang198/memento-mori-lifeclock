@@ -1,4 +1,4 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.content
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -17,15 +17,19 @@ import androidx.glance.layout.size
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import dev.mementomori.lifeclock.model.LabelPlacement
+import dev.mementomori.lifeclock.widget.render.RenderedRing
+import dev.mementomori.lifeclock.widget.render.WidgetState
 
 /**
  * The widget's only composable. Takes a finished [WidgetState], so it can be composed in a unit
  * test with no repositories, no DataStore and no time.
+ *
+ * [modifier] carries the tap action, so tests can compose the same content without one.
  */
 @Composable
-fun WidgetContent(state: WidgetState) {
+fun WidgetContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(8.dp),
+        modifier = GlanceModifier.fillMaxSize().padding(8.dp).then(modifier),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {

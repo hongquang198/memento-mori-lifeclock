@@ -1,4 +1,4 @@
-package dev.mementomori.lifeclock.widget
+package dev.mementomori.lifeclock.widget.content
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

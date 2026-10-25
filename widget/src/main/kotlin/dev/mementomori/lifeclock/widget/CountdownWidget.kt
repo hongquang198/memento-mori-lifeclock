@@ -2,11 +2,20 @@ package dev.mementomori.lifeclock.widget
 
 import android.content.Context
 import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.AppWidgetId
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import dev.mementomori.lifeclock.widget.ring.CachedRingRenderer
+import dev.mementomori.lifeclock.widget.refresh.UnbindWidgetsWorker
+import dev.mementomori.lifeclock.widget.content.WidgetContent
+import dev.mementomori.lifeclock.widget.refresh.WidgetRefreshScheduler
+import dev.mementomori.lifeclock.widget.render.WidgetStateLoader
+import dev.mementomori.lifeclock.widget.render.appWidgetWidthDp
+import dev.mementomori.lifeclock.widget.config.configureIntent
 
 /**
  * The countdown widget.
@@ -19,8 +28,18 @@ class CountdownWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val dependencies = WidgetDependenciesHolder.current
             ?: error("WidgetDependenciesHolder.current must be set in Application.onCreate")
-        val state = WidgetStateLoader(dependencies, processRingRenderer, context).load(id.bindingKey())
-        provideContent { WidgetContent(state) }
+        val appWidgetId = (id as? AppWidgetId)?.appWidgetId
+        val state = WidgetStateLoader(dependencies, processRingRenderer, context)
+            .load(id.bindingKey(), appWidgetId?.let { appWidgetWidthDp(context, it) })
+
+        // Tapping the widget must reach the picker. The launcher's own "reconfigure" affordance is
+        // not dependable (measured on a Pixel 8a: an unbound widget only offers "Remove"), so the
+        // widget carries its own action - the same intent the launcher uses at placement.
+        val tap = appWidgetId?.let {
+            GlanceModifier.clickable(actionStartActivity(configureIntent(context, it)))
+        } ?: GlanceModifier
+
+        provideContent { WidgetContent(state, tap) }
     }
 }
 
