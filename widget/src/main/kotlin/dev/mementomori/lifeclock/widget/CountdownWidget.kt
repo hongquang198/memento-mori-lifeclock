@@ -1,6 +1,8 @@
 package dev.mementomori.lifeclock.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.os.Bundle
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.clickable
@@ -87,9 +89,25 @@ class CountdownWidgetReceiver : GlanceAppWidgetReceiver() {
         WidgetRefreshScheduler(context).stop()
     }
 
+    /**
+     * Resizing changes the cell the ring has to fit into, so the draw has to be recomputed -
+     * otherwise the widget keeps the diameter it fitted to the old cell until the next alarm.
+     * Unique work with REPLACE collapses a drag's dozen options changes into one draw.
+     */
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        WidgetRefreshScheduler(context).refreshNow(reason = "options", force = true)
+    }
+
     /** Storage is a DataStore, so the write goes to a worker rather than the main thread. */
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         super.onDeleted(context, appWidgetIds)
         UnbindWidgetsWorker.enqueue(context, appWidgetIds)
     }
 }
+

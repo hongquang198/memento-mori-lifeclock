@@ -309,12 +309,22 @@ not assurances.
   look `CUSTOM` - picking a date used to turn "classic" into "custom" with no visual change.
   Evidence: editor `Starts: 2026-10-01` -> arcs at ~71%, template still `classic` -> save ->
   `render(22): fraction=0.7102523968578668 bitmap=255x255 cell=140dp`.
-- [ ] **F3** GRID/STACK clip on the launcher: `fitDiameterDp` caps a ring against the **whole cell**
-  (`cellWidthDp - 16`), not against its slot, so two 97 dp rings in a 140 dp cell overflow and the
-  second ring is cut at the widget edge (seen on Pixel 8a, 2x2 cell, `grid`, 2 rings).
-  Proposed: divide the cell by the slot count before `fitDiameterDp` - columns for GRID, rows for
-  STACK using the square-cell proxy - and log the slot width instead of the cell width. Deferred
-  because it changes the fitted-size rule and needs the launcher matrix (T4.17) to judge it.
+- [x] **F3** GRID/STACK clip on the launcher - **not a code defect**: the cell was simply smaller
+  than two 97 dp rings need (the user resized it; two rings at 97 dp need ~198 dp). What remains
+  open is the *rule*, not the bug: `fitDiameterDp` caps against the whole cell, not against a
+  ring's slot, so two rings can only fit if each is <= (cell - 8) / 2. That is the same question
+  as "should a countdown have more than one arc" (A/B decision), so no separate fix.
+- [x] **F4** The widget could not be resized below **2x2**: `minWidth/minHeight = 110dp` plus
+  `targetCellWidth/Height = 2` is a *floor*, so 1x1 and 2x1 were never offered - even for a 60 dp
+  ring. A widget cannot size itself to its content (the launcher grid owns the cell); it can only
+  declare the floor. Now: `minWidth/Height = 40dp` (1 cell), target stays 2x2, resizeMode both.
+  Also, since a 1x1 cell has no room to waste: column padding 8 -> 4 dp (`CELL_PADDING_DP` 16 -> 8),
+  the ring label scales 9-15 sp with the ring (`labelFontSp`) instead of a fixed 13 sp that
+  overflowed a 32 dp circle, and `onAppWidgetOptionsChanged` now redraws so a resized widget
+  re-fits its ring immediately instead of at the next alarm.
+  Evidence: `dumpsys appwidget` -> `min=(10241x10241)` = 40x40 dp (was 110x110); home screen at 1x1
+  renders one 47 dp ring with `10 weeks` inside it. `RingFitTest` pins the 1x1 fit and the font
+  floor/ceiling.
 
 ---
 
@@ -323,3 +333,4 @@ not assurances.
 - [ ] `./gradlew :widget:verifyRoborazziDebug` (or Paparazzi) — screenshot goldens.
 - [ ] `./gradlew lint` — Android lint clean.
 - [ ] Confirm `:core:time` and `:core:mortality` still have **no Android imports** (architecture guard test).
+

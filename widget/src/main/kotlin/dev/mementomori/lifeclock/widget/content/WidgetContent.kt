@@ -16,12 +16,14 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import dev.mementomori.lifeclock.model.LabelPlacement
 import dev.mementomori.lifeclock.model.WidgetLayout
 import dev.mementomori.lifeclock.widget.render.LayoutPlan
 import dev.mementomori.lifeclock.widget.render.RenderedRing
 import dev.mementomori.lifeclock.widget.render.WidgetState
+import dev.mementomori.lifeclock.widget.render.labelFontSp
 import kotlin.math.roundToInt
 
 /**
@@ -33,7 +35,7 @@ import kotlin.math.roundToInt
 @Composable
 fun WidgetContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier) {
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(8.dp).then(modifier),
+        modifier = GlanceModifier.fillMaxSize().padding(4.dp).then(modifier),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -81,14 +83,14 @@ private fun Ring(ring: RenderedRing, scale: Float = 1f, showLabel: Boolean = tru
         // The label sits on top of the bitmap; the bitmap itself never contains text.
         ring.labelPlacement == LabelPlacement.INSIDE -> Box(contentAlignment = Alignment.Center) {
             RingImage(scaled)
-            Label(ring.label)
+            Label(ring.label, scaled.sizeDp)
         }
 
         ring.labelPlacement == LabelPlacement.UNDER -> Column(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             RingImage(scaled)
-            Label(ring.label)
+            Label(ring.label, scaled.sizeDp)
         }
 
         else -> RingImage(scaled)
@@ -105,9 +107,16 @@ private fun RingImage(ring: RenderedRing) {
 }
 
 @Composable
-private fun Label(text: String) {
+private fun Label(text: String, ringSizeDp: Int) {
     if (text.isBlank()) return
-    Text(text = text, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 13.sp))
+    Text(
+        text = text,
+        style = TextStyle(
+            color = GlanceTheme.colors.onSurface,
+            fontSize = labelFontSp(ringSizeDp).sp,
+            textAlign = TextAlign.Center,
+        ),
+    )
 }
 
 
@@ -121,4 +130,5 @@ internal object WidgetCopy {
     const val UNCONFIGURED = "Open Memento Mori to choose a countdown"
     const val UNSUPPORTED = "Open Memento Mori to finish setting this up"
 }
+
 
