@@ -34,10 +34,10 @@ class WidgetRefreshScheduler(private val context: Context) {
         val request = PeriodicWorkRequestBuilder<CountdownRefreshWorker>(PERIODIC_MINUTES, TimeUnit.MINUTES)
             .setInputData(workDataOf(KEY_REASON to REASON_PERIODIC, KEY_FORCE to false))
             .build()
-        // KEEP: re-arming on every boot would reset the period and delay the first tick. The
-        // trade-off is that the *first* registration wins, input data included, until it is
-        // cancelled - so changing this payload only affects devices that never had the work.
-        workManager.enqueueUniquePeriodicWork(UNIQUE_PERIODIC, ExistingPeriodicWorkPolicy.KEEP, request)
+        // UPDATE, not KEEP: KEEP preserves the first registration forever, so an install that ever
+        // ran a build with a different spec (interval, constraints, input data) would keep that spec
+        // until the work is cancelled. UPDATE rewrites it in place without restarting the period.
+        workManager.enqueueUniquePeriodicWork(UNIQUE_PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
 
     fun refreshNow(reason: String, force: Boolean) {

@@ -254,14 +254,33 @@ widget" (T4.16) — a common place for widgets to drift from their preview.
 **Review focus:** the recorded **evidence** that the declared update budget is met — numbers,
 not assurances.
 
-- [ ] **T5.1** Battery Historian run: wakeups within the declared cadence budget (no per-minute wakeups).
-- [ ] **T5.2** `adb shell dumpsys appwidget` review: update counts match design.
+- [x] **T5.1** Battery Historian run: wakeups within the declared cadence budget (no per-minute wakeups).
+  **Deviation:** raw `dumpsys batterystats --charged` (the same ledger Battery Historian renders);
+  the GUI was not used. Numbers in `docs/BatteryBudget.md` section 5.
+- [x] **T5.2** `adb shell dumpsys appwidget` review: update counts match design.
+  `updatePeriodMillis=0`, one 15-min unconstrained job, one `ALLOW_WHILE_IDLE` alarm at the boundary.
+  **Finding:** the `charging` + 10-year job in `dumpsys jobscheduler` is Glance's own `SessionWorker`
+  placeholder, proven by reading `no_backup/androidx.work.workdb` - not our spec. The near-miss is
+  recorded because an audit that stops at `dumpsys` would call it a defect.
+  **Hardening:** `ensurePeriodic()` now uses `ExistingPeriodicWorkPolicy.UPDATE` (KEEP would keep a
+  stale first registration forever); pinned by `WidgetRefreshSchedulerTest`.
 - [ ] **T5.3** Doze/App Standby test: widget correct after long idle.
-- [ ] **T5.4** Process-death test: kill app; widget recomposes from DataStore correctly.
-- [ ] **T5.5** ANR audit: receivers use `goAsync`/WorkManager; no main-thread IO.
-- [ ] **T5.6** Memory: verify ring LRU cache bounds with many widget instances.
-- [ ] **T5.7** Record the budget + results in `docs/BatteryBudget.md`.
+  Attempted: `dumpsys deviceidle force-idle` refused (`stopped at INACTIVE` - device charging, screen
+  on). Both mechanisms are Doze-compatible by construction (`FLAG_ALLOW_WHILE_IDLE`, unconstrained
+  job); the full run needs an unplugged, screen-off device.
+- [x] **T5.4** Process-death test: kill app; widget recomposes from DataStore correctly.
+  `am kill` -> no pid; `DEBUG_UPDATE` broadcast -> pid 13315 -> `render(16): fraction=0.5112
+  bitmap=326x326 cell=140dp label="14,068 days"`. A cold process drew from the store, no UI.
+- [x] **T5.5** ANR audit: receivers use `goAsync`/WorkManager; no main-thread IO.
+  No `runBlocking`, no main-thread queries, no blocking reads: receivers only enqueue work and every
+  store read is a suspend call (checked across `widget/`, `app/`, `core/data/`).
+- [x] **T5.6** Memory: verify ring LRU cache bounds with many widget instances.
+  Bound proven by the constant + `RingCacheTest`: 32 entries x ~425 KB = ~13.6 MB ceiling, keyed by
+  `(style, fraction bucket)` so instances sharing a look share a bitmap. Placing ten instances was
+  not done; the process measured 140 MB PSS with the editor open.
+- [x] **T5.7** Record the budget + results in `docs/BatteryBudget.md`.
 - **DoD:** wakeups within budget, no ANR, all resilience tests pass; budget documented.
+  Met except the real-idle Doze run and the launcher matrix, both listed as open in the budget doc.
 
 ---
 
