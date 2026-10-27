@@ -84,7 +84,7 @@ class ConfigActivityTest {
 
         val list = activity.findViewById<ListView>(android.R.id.list)
         assertNotNull("the picker must show the catalog", list)
-        assertEquals("an empty catalog is seeded first", 1, list.adapter.count)
+        assertEquals("an empty catalog is seeded first", 2, list.adapter.count)
 
         list.performItemClick(null, 0, 0)
         settle()
@@ -107,6 +107,22 @@ class ConfigActivityTest {
                 .getWorkInfosForUniqueWork(WidgetRefreshScheduler.UNIQUE_IMMEDIATE)
                 .get()
                 .size,
+        )
+    }
+
+    @Test
+    fun `the life clock row binds the life clock config`() {
+        val activity = launch(17)
+        settle()
+
+        // Row 1 is the seeded life clock; the countdown is row 0.
+        activity.findViewById<ListView>(android.R.id.list).performItemClick(null, 1, 1)
+        settle()
+
+        assertEquals(Activity.RESULT_OK, Shadows.shadowOf(activity).resultCode)
+        assertEquals(
+            ConfigPicker.SEED_LIFE_CLOCK_ID,
+            runBlocking { store.bindings.observeBinding("17").first() }?.configId,
         )
     }
 

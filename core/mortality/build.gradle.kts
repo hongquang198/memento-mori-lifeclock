@@ -12,7 +12,7 @@ kotlin {
 
 dependencies {
     api(project(":core:model"))
-    implementation(project(":core:time")) // net-free-hours shares the time math
+    // :core:time is added with NET_FREE_HOURS, the one stat that reuses its time math.
 
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)

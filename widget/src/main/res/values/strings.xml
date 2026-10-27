@@ -3,7 +3,9 @@
     <string name="widget_label">Memento Mori Countdown</string>
     <string name="widget_description">A ring showing how much of a countdown is left.</string>
     <string name="ring_content_description">Countdown ring</string>
-    <string name="config_picker_title">Choose a countdown</string>
+    <string name="config_picker_title">Choose a widget</string>
     <string name="config_seed_name">First year</string>
+    <string name="config_seed_life_clock_name">Life clock (sample)</string>
+    <string name="config_seed_profile_name">Sample person</string>
     <string name="config_selected">✓ %1$s</string>
 </resources>

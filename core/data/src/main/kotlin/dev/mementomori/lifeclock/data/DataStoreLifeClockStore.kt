@@ -3,15 +3,17 @@ package dev.mementomori.lifeclock.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetInstanceBinding
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-/** Production storage: one preferences file holding two JSON lists. */
+/** Production storage: one preferences file holding three JSON lists. */
 class DataStoreLifeClockStore(dataStore: DataStore<Preferences>) : LifeClockStore {
     override val configs: WidgetConfigRepository = DataStoreWidgetConfigRepository(dataStore)
     override val bindings: WidgetBindingRepository = DataStoreWidgetBindingRepository(dataStore)
+    override val profiles: ProfileRepository = DataStoreProfileRepository(dataStore)
 }
 
 class DataStoreWidgetConfigRepository(
@@ -79,5 +81,43 @@ class DataStoreWidgetBindingRepository(
                 prefs.bindings().filterNot { it.glanceId == glanceId },
             )
         }
+    }
+}
+
+class DataStoreProfileRepository(
+    private val dataStore: DataStore<Preferences>,
+) : ProfileRepository {
+
+    override fun observe(profileId: String): Flow<PersonProfile?> =
+        observeAll().map { all -> all.firstOrNull { it.profileId == profileId } }
+
+    override fun observeAll(): Flow<List<PersonProfile>> =
+        dataStore.data.map { it.profiles() }
+
+    override suspend fun save(profile: PersonProfile) {
+        dataStore.edit { prefs ->
+            prefs[StoreKeys.PROFILES] =
+                StoreCodec.encodeProfiles(StoreRules.upsertProfile(prefs.profiles(), profile))
+        }
+    }
+
+    override suspend fun delete(profileId: String): DeleteProfileResult {
+        var result: DeleteProfileResult = DeleteProfileResult.NotFound
+        dataStore.edit { prefs ->
+            val current = prefs.profiles()
+            if (current.none { it.profileId == profileId }) return@edit
+
+            // Deleting it would leave those configs computing from nothing.
+            val referenced = StoreRules.configsReferencing(prefs.configs(), profileId)
+            if (referenced.isNotEmpty()) {
+                result = DeleteProfileResult.BlockedByConfigs(referenced)
+                return@edit
+            }
+
+            prefs[StoreKeys.PROFILES] =
+                StoreCodec.encodeProfiles(current.filterNot { it.profileId == profileId })
+            result = DeleteProfileResult.Deleted
+        }
+        return result
     }
 }

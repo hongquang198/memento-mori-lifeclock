@@ -139,19 +139,34 @@ how to make a claim independently verifiable rather than hardcoded.
 **Review focus:** the derivation and reconciliation of the numbers — this is the product's
 entire credibility. Check `Methodology.md` against the tests.
 
-- [ ] **T3.0** Bundle SSA `e_x` + WHO life tables as assets; define `Methodology.md` (formulas + versioning).
-- [ ] **T3.1** Tests (golden): `LifeTableSource.lifeExpectancy` for sampled (sex, country, age) rows.
-- [ ] **T3.2** Impl: asset-backed `LifeTableSource` + `Citation` on every result.
-- [ ] **T3.3** Tests: `days_left`/`weeks_left`/`months_left` reconcile to SSA `e_x` within tolerance.
-- [ ] **T3.4** Impl: `LifeStatsEngine.compute()` base stats.
-- [ ] **T3.5** Tests: derived stats (heartbeats, sleep tax, seasons, books) match documented formulas.
-- [ ] **T3.6** Impl: derived stats, each with its own `Citation`.
+- [x] **T3.0** Bundle `e_x` tables + `Methodology.md`. **Deviation:** `ssa.gov` returns 403 to every
+  programmatic client, so the source is **UN WPP 2024** (period 2023, medium variant) - the upstream
+  of WHO's estimates and one table for all 237 countries. `tools/build_life_tables.py` regenerates the
+  183 KB subset from the 138 MB download; the citation, filters and vintage are in `docs/Methodology.md`.
+- [x] **T3.1** Golden tests: `LifeTablesTest` pins US `e_40` for both sexes, linear interpolation
+  inside a five-year group, null for unknown country / age past the table, monotonicity.
+- [x] **T3.2** Impl: `CsvLifeTableSource` + `Citation` (source, vintage, table, url, retrieved, licence).
+- [x] **T3.3** Tests: `days/weeks/months` are one ratio with three divisors; pinned integers
+  (14,367 days / 2,053 weeks / 473 months for the reference profile). Cross-source reconciliation
+  (UN `e_0` vs WHO `e_0`) still to add - needs the WHO series pinned to a vintage.
+- [x] **T3.4** Impl: `LifeStatsEngine.compute()` - zone-aware age, `e_x x 365.2425`, round up.
+- [x] **T3.5** Tests: heartbeats (`days x 1440 x 72`, flagged `MODEL` against the AHA 60-100 range)
+  and seasons (`days / 91.31`, `SOURCE`). Sleep tax and books are **not** implemented: books have no
+  source that survives scrutiny, sleep tax is the ATUS split below.
+- [x] **T3.6** Impl: `DerivedStat` carries `StatKind.SOURCE` vs `MODEL`, so the UI can label a choice
+  differently from a fact.
 - [ ] **T3.7** Tests: `NET_FREE_HOURS` reproduces published **BLS ATUS** averages within tolerance.
-- [ ] **T3.8** Impl: ATUS-derived maintenance ratio; wire `PersonProfile` (DOB, sex, country, sleep, screen).
-- [ ] **T3.9** Tests: profile validation (future DOB, implausible sleep/screen hours).
-- [ ] **T3.10** Impl: `ProfileRepository` + app UI section for profile.
-- [ ] **T3.11** Impl: `LifeClockWidget` — one ring per selected category (default `CONCENTRIC`; see M4).
-- **DoD:** computed stats reconcile to SSA/ATUS within tolerance; life-clock widget renders on device.
+- [ ] **T3.8** Impl: ATUS-derived maintenance ratio; `NET_FREE_HOURS` stays absent from the engine
+  until then, and the resolver drops a ring that asks for it rather than drawing an empty arc.
+- [x] **T3.9** Tests: `ProfileValidatorTest` - future birth, age > 120, sleep/screen range, and
+  sleep + screen exceeding the day.
+- [x] **T3.10** Impl: `ProfileRepository` (DataStore + in-memory) with the delete guard
+  (`BlockedByConfigs`). The *editing* UI is feature C; M3 ships a named sample profile.
+- [x] **T3.11** Impl: `LIFE_CLOCK` branch in `WidgetSpecResolver` + `WidgetStateLoader`; the ring's
+  label becomes its own count ("14,068 days"), no Chronometer. Device: `render(16): fraction=0.5112
+  bitmap=326x326 cell=140dp label="14,068 days"`.
+- **DoD:** computed stats reconcile to the table (golden + conversion tests); life-clock widget
+  renders on device. ATUS reconciliation (T3.7/T3.8) is open and tracked.
 
 ---
 

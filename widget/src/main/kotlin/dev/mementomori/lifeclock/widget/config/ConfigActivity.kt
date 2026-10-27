@@ -71,12 +71,21 @@ class ConfigActivity : ComponentActivity() {
             return
         }
 
-        val picker = ConfigPicker(dependencies.configs, dependencies.bindings, dependencies.clock)
+        val picker = ConfigPicker(
+            configs = dependencies.configs,
+            bindings = dependencies.bindings,
+            profiles = dependencies.profiles,
+            clock = dependencies.clock,
+        )
         val bindingKey = AppWidgetId(appWidgetId).bindingKey()
         title = getString(R.string.config_picker_title)
 
         lifecycleScope.launch {
-            picker.seedIfEmpty(getString(R.string.config_seed_name))
+            picker.seedIfEmpty(
+                countdownName = getString(R.string.config_seed_name),
+                lifeClockName = getString(R.string.config_seed_life_clock_name),
+                profileName = getString(R.string.config_seed_profile_name),
+            )
             showCatalog(
                 picker = picker,
                 catalog = picker.catalog(),

@@ -1,5 +1,6 @@
 package dev.mementomori.lifeclock.data
 
+import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetInstanceBinding
 import kotlinx.coroutines.flow.Flow
@@ -16,12 +17,16 @@ class InMemoryLifeClockStore : LifeClockStore {
 
     private val configState = MutableStateFlow<List<WidgetConfigRecord>>(emptyList())
     private val bindingState = MutableStateFlow<List<WidgetInstanceBinding>>(emptyList())
+    private val profileState = MutableStateFlow<List<PersonProfile>>(emptyList())
 
     override val configs: WidgetConfigRepository =
         InMemoryWidgetConfigRepository(configState, bindingState)
 
     override val bindings: WidgetBindingRepository =
         InMemoryWidgetBindingRepository(configState, bindingState)
+
+    override val profiles: ProfileRepository =
+        InMemoryProfileRepository(profileState, configState)
 }
 
 private class InMemoryWidgetConfigRepository(
@@ -71,5 +76,30 @@ private class InMemoryWidgetBindingRepository(
 
     override suspend fun unbind(glanceId: String) {
         bindings.value = bindings.value.filterNot { it.glanceId == glanceId }
+    }
+}
+
+private class InMemoryProfileRepository(
+    private val profiles: MutableStateFlow<List<PersonProfile>>,
+    private val configs: MutableStateFlow<List<WidgetConfigRecord>>,
+) : ProfileRepository {
+
+    override fun observe(profileId: String): Flow<PersonProfile?> =
+        observeAll().map { all -> all.firstOrNull { it.profileId == profileId } }
+
+    override fun observeAll(): Flow<List<PersonProfile>> = profiles
+
+    override suspend fun save(profile: PersonProfile) {
+        profiles.value = StoreRules.upsertProfile(profiles.value, profile)
+    }
+
+    override suspend fun delete(profileId: String): DeleteProfileResult {
+        if (profiles.value.none { it.profileId == profileId }) return DeleteProfileResult.NotFound
+
+        val referenced = StoreRules.configsReferencing(configs.value, profileId)
+        if (referenced.isNotEmpty()) return DeleteProfileResult.BlockedByConfigs(referenced)
+
+        profiles.value = profiles.value.filterNot { it.profileId == profileId }
+        return DeleteProfileResult.Deleted
     }
 }

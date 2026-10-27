@@ -2,8 +2,11 @@ package dev.mementomori.lifeclock
 
 import android.content.Context
 import dev.mementomori.lifeclock.data.LifeClockStoreFactory
+import dev.mementomori.lifeclock.data.ProfileRepository
 import dev.mementomori.lifeclock.data.WidgetBindingRepository
 import dev.mementomori.lifeclock.data.WidgetConfigRepository
+import dev.mementomori.lifeclock.mortality.CsvLifeTableSource
+import dev.mementomori.lifeclock.mortality.LifeStatsEngine
 import dev.mementomori.lifeclock.time.Clock
 import dev.mementomori.lifeclock.time.CountdownModel
 import dev.mementomori.lifeclock.time.DefaultCountdownModel
@@ -24,7 +27,11 @@ object AppDependencies {
         return object : WidgetDependencies {
             override val configs: WidgetConfigRepository = store.configs
             override val bindings: WidgetBindingRepository = store.bindings
+            override val profiles: ProfileRepository = store.profiles
             override val countdownModel: CountdownModel = DefaultCountdownModel()
+
+            // Parsed once per process: 10k rows is cheap, but re-reading it per draw is not.
+            override val lifeStats: LifeStatsEngine = LifeStatsEngine(CsvLifeTableSource.bundled())
             override val clock: Clock = Clock.systemUTC()
             override val zone: ZoneId get() = ZoneId.systemDefault()
         }

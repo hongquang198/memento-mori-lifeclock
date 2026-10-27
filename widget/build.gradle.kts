@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:time"))
     implementation(project(":core:data"))
+    implementation(project(":core:mortality"))
     implementation(project(":core:scheduler"))
 
     implementation(libs.androidx.core.ktx)

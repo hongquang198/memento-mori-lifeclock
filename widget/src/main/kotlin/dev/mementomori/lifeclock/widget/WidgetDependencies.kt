@@ -1,7 +1,9 @@
 package dev.mementomori.lifeclock.widget
 
+import dev.mementomori.lifeclock.data.ProfileRepository
 import dev.mementomori.lifeclock.data.WidgetBindingRepository
 import dev.mementomori.lifeclock.data.WidgetConfigRepository
+import dev.mementomori.lifeclock.mortality.LifeStatsEngine
 import dev.mementomori.lifeclock.time.Clock
 import dev.mementomori.lifeclock.time.CountdownModel
 import java.time.ZoneId
@@ -16,7 +18,9 @@ import java.time.ZoneId
 interface WidgetDependencies {
     val configs: WidgetConfigRepository
     val bindings: WidgetBindingRepository
+    val profiles: ProfileRepository
     val countdownModel: CountdownModel
+    val lifeStats: LifeStatsEngine
     val clock: Clock
 
     /** Read per use, not cached: the user can change timezone while the process lives. */

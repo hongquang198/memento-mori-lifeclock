@@ -22,7 +22,12 @@ import dev.mementomori.lifeclock.widget.TestDependencies
 class ConfigPickerTest {
 
     private val store = InMemoryLifeClockStore()
-    private val picker = ConfigPicker(store.configs, store.bindings, TestDependencies(store).clock)
+    private val picker = ConfigPicker(
+        configs = store.configs,
+        bindings = store.bindings,
+        profiles = store.profiles,
+        clock = TestDependencies(store).clock,
+    )
 
     private suspend fun existing(id: String) = WidgetConfigRecord(
         configId = id,
@@ -33,34 +38,44 @@ class ConfigPickerTest {
         granularity = RefreshIntent.DAILY,
     ).also { store.configs.save(it) }
 
-    @Test
-    fun `an empty catalog is seeded with one countdown that has a ring`() = runBlocking {
-        val seed = picker.seedIfEmpty("First year")
+    private suspend fun seed() = picker.seedIfEmpty("First year", "Life clock", "Sample person")
 
-        assertNotNull(seed)
+    @Test
+    fun `an empty catalog is seeded with a countdown and a life clock`() = runBlocking {
+        val seeded = seed()
+
+        assertEquals(2, seeded.size)
         val catalog = picker.catalog()
-        assertEquals(1, catalog.size)
-        assertEquals("First year", catalog.single().name)
-        assertEquals(WidgetType.COUNTDOWN, catalog.single().type)
-        assertEquals(RefreshIntent.DAILY, catalog.single().granularity)
-        assertTrue(catalog.single().rings.isNotEmpty())
-        assertTrue(catalog.single().endEpochMillis!! > catalog.single().startEpochMillis)
+        assertEquals(2, catalog.size)
+
+        val countdown = catalog.single { it.type == WidgetType.COUNTDOWN }
+        assertEquals("First year", countdown.name)
+        assertEquals(RefreshIntent.DAILY, countdown.granularity)
+        assertTrue(countdown.rings.isNotEmpty())
+        assertTrue(countdown.endEpochMillis!! > countdown.startEpochMillis)
+
+        val lifeClock = catalog.single { it.type == WidgetType.LIFE_CLOCK }
+        assertEquals("Life clock", lifeClock.name)
+        // A life clock without a profile renders nothing, so the seed must create both.
+        val profileId = lifeClock.profileRef
+        assertNotNull(profileId)
+        assertEquals("Sample person", store.profiles.observe(profileId!!).first()?.name)
     }
 
     @Test
-    fun `seeding twice still leaves one config`() = runBlocking {
-        picker.seedIfEmpty("First year")
-        val second = picker.seedIfEmpty("First year")
+    fun `seeding twice still leaves two configs`() = runBlocking {
+        seed()
+        val second = seed()
 
-        assertNull(second)
-        assertEquals(1, picker.catalog().size)
+        assertTrue(second.isEmpty())
+        assertEquals(2, picker.catalog().size)
     }
 
     @Test
     fun `a catalog with configs is never seeded`() = runBlocking {
         existing("mine")
 
-        assertNull(picker.seedIfEmpty("First year"))
+        assertTrue(seed().isEmpty())
         assertEquals(listOf("mine"), picker.catalog().map { it.configId })
     }
 

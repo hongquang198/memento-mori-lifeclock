@@ -1,6 +1,8 @@
 package dev.mementomori.lifeclock.widget
 
 import dev.mementomori.lifeclock.data.LifeClockStore
+import dev.mementomori.lifeclock.mortality.CsvLifeTableSource
+import dev.mementomori.lifeclock.mortality.LifeStatsEngine
 import dev.mementomori.lifeclock.time.Clock
 import dev.mementomori.lifeclock.time.DefaultCountdownModel
 import java.time.Instant
@@ -22,5 +24,9 @@ internal class TestDependencies(
 ) : WidgetDependencies {
     override val configs = store.configs
     override val bindings = store.bindings
+    override val profiles = store.profiles
     override val countdownModel = DefaultCountdownModel()
+
+    /** The real table, not a fake: a fake would let a broken asset pass every widget test. */
+    override val lifeStats = LifeStatsEngine(CsvLifeTableSource.bundled())
 }

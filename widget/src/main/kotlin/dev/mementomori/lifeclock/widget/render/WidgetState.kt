@@ -10,7 +10,7 @@ sealed interface WidgetState {
     /** No config is bound to this placed widget, or the bound config no longer exists. */
     data object Unconfigured : WidgetState
 
-    /** A config exists but this build cannot draw it yet (LIFE_CLOCK needs M3). */
+    /** A config exists but cannot be drawn yet: no profile, unknown country, or no usable rings. */
     data object Unsupported : WidgetState
 
     data class Ready(

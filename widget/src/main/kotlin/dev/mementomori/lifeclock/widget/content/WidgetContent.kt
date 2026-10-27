@@ -88,5 +88,5 @@ private fun Message(text: String) {
 /** Copy for states that have no config to draw. Kept here so the composable needs no resources. */
 internal object WidgetCopy {
     const val UNCONFIGURED = "Open Memento Mori to choose a countdown"
-    const val UNSUPPORTED = "This widget type arrives in a later milestone"
+    const val UNSUPPORTED = "Open Memento Mori to finish setting this up"
 }

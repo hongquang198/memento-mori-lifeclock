@@ -1,5 +1,6 @@
 package dev.mementomori.lifeclock.data
 
+import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetInstanceBinding
 import kotlinx.coroutines.flow.Flow
@@ -41,6 +42,28 @@ interface WidgetBindingRepository {
 interface LifeClockStore {
     val configs: WidgetConfigRepository
     val bindings: WidgetBindingRepository
+    val profiles: ProfileRepository
+}
+
+/** Outcome of deleting a profile. Mirrors [DeleteConfigResult]: the UI must be able to say why. */
+sealed interface DeleteProfileResult {
+    data object Deleted : DeleteProfileResult
+
+    /** Refused: these configs still compute from it. */
+    data class BlockedByConfigs(val configIds: List<String>) : DeleteProfileResult
+
+    data object NotFound : DeleteProfileResult
+}
+
+/** Who a life clock is for. A config points at a profile; the profile owns no widget state. */
+interface ProfileRepository {
+    fun observe(profileId: String): Flow<PersonProfile?>
+    fun observeAll(): Flow<List<PersonProfile>>
+
+    suspend fun save(profile: PersonProfile)
+
+    /** Refuses while any config still references [profileId]. */
+    suspend fun delete(profileId: String): DeleteProfileResult
 }
 
 /** Shared rules, used by every implementation so they cannot drift apart. */
@@ -68,4 +91,22 @@ internal object StoreRules {
             current + next
         }
     }
+
+    fun upsertProfile(
+        current: List<PersonProfile>,
+        next: PersonProfile,
+    ): List<PersonProfile> {
+        val index = current.indexOfFirst { it.profileId == next.profileId }
+        return if (index >= 0) {
+            current.toMutableList().also { it[index] = next }
+        } else {
+            current + next
+        }
+    }
+
+    /** Configs that would be left computing from nothing if the profile were deleted. */
+    fun configsReferencing(
+        configs: List<WidgetConfigRecord>,
+        profileId: String,
+    ): List<String> = configs.filter { it.profileRef == profileId }.map { it.configId }
 }
