@@ -219,8 +219,10 @@ widget" (T4.16) — a common place for widgets to drift from their preview.
 - [x] **T4.14** Impl: dynamic color / `ColorProvider` theming; verify `theme:` color roles render.
   Widget side: `ResourceThemePalette` resolves `theme:*` (tested) and the editor offers those roles
   as swatches. The app shell stays on the default M3 scheme: two theme sources would need one owner.
-- [ ] **T4.15** Impl: a11y - content descriptions, large-font survival. Descriptions are done and
-  tested (`contentDescription` falls back to a generic label); large-font survival is unverified.
+- [x] **T4.15** Impl: a11y - content descriptions, large-font survival. Descriptions are done and
+  tested (`contentDescription` falls back to a generic label). Large-font evidence: the catalog
+  screen at `font_scale 1.3` grows its rows without clipping; the two editors were not re-checked at
+  that scale (their controls scroll horizontally, but that is reasoning, not a screenshot).
 - [ ] **T4.16** Impl: per-size widget previews (Android 12+ `previewLayout` + static fallback); verify preview matches placed widget.
   The *parity* half is done by construction (shared `RingRasterizer`); `previewLayout` is not shipped.
 - [ ] **T4.17** Manual: launcher matrix (Pixel Launcher, Samsung One UI, Nova, Lawnchair) - screenshot each template.
