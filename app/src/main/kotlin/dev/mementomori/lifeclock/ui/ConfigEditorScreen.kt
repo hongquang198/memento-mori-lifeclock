@@ -1,7 +1,9 @@
 package dev.mementomori.lifeclock.ui
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,9 +56,12 @@ import dev.mementomori.lifeclock.model.WidgetLayout
 import dev.mementomori.lifeclock.model.WidgetType
 import dev.mementomori.lifeclock.model.editor.ConfigDraft
 import dev.mementomori.lifeclock.model.editor.ConfigProblem
-import java.time.Instant
+import dev.mementomori.lifeclock.time.ScheduleTime
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import kotlin.math.roundToInt
 
 /**
@@ -210,57 +215,81 @@ private fun <T> ChipRow(
 @Composable
 private fun StartRow(config: WidgetConfigRecord, context: Context, onPick: (Long) -> Unit) {
     val zone = remember { ZoneId.systemDefault() }
-    val current = Instant.ofEpochMilli(config.startEpochMillis).atZone(zone).toLocalDate()
+    val date = ScheduleTime.dateOf(config.startEpochMillis, zone)
 
-    OutlinedButton(
-        onClick = {
-            DatePickerDialog(
-                context,
-                { _, year, month, day ->
-                    // Start of the chosen day: "it started on the 1st" means from 00:00, which is
-                    // also what makes the arc's total span readable as whole days.
-                    onPick(
-                        LocalDate.of(year, month + 1, day)
-                            .atStartOfDay(zone)
-                            .toInstant()
-                            .toEpochMilli(),
-                    )
-                },
-                current.year,
-                current.monthValue - 1,
-                current.dayOfMonth,
-            ).show()
-        },
-    ) { Text("Starts: $current") }
+    ScheduleRow(
+        dateLabel = "Starts: $date",
+        date = date,
+        time = ScheduleTime.timeOf(config.startEpochMillis, zone),
+        context = context,
+        onDate = { picked -> onPick(ScheduleTime.withDate(config.startEpochMillis, picked, zone)) },
+        onTime = { picked -> onPick(ScheduleTime.withTime(config.startEpochMillis, picked, zone)) },
+    )
 }
 
 @Composable
 private fun DeadlineRow(config: WidgetConfigRecord, context: Context, onPick: (Long) -> Unit) {
     val zone = remember { ZoneId.systemDefault() }
-    val current = config.endEpochMillis?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+    // An unpicked deadline still needs a date and a time to show: today, through the end of day.
+    val current = config.endEpochMillis ?: ScheduleTime.defaultDeadline(zone)
+    val date = ScheduleTime.dateOf(current, zone)
 
-    OutlinedButton(
-        onClick = {
-            val date = current ?: LocalDate.now(zone)
-            DatePickerDialog(
-                context,
-                { _, year, month, day ->
-                    // End of the chosen day: a deadline of "the 3rd" means through the 3rd.
-                    onPick(
-                        LocalDate.of(year, month + 1, day)
-                            .atTime(23, 59)
-                            .atZone(zone)
-                            .toInstant()
-                            .toEpochMilli(),
-                    )
-                },
-                date.year,
-                date.monthValue - 1,
-                date.dayOfMonth,
-            ).show()
-        },
-    ) { Text(if (current == null) "Pick a deadline" else "Deadline: $current") }
+    ScheduleRow(
+        dateLabel = if (config.endEpochMillis == null) "Pick a deadline" else "Deadline: $date",
+        date = date,
+        time = ScheduleTime.timeOf(current, zone),
+        context = context,
+        onDate = { picked -> onPick(ScheduleTime.withDate(current, picked, zone)) },
+        onTime = { picked -> onPick(ScheduleTime.withTime(current, picked, zone)) },
+    )
 }
+
+/**
+ * One schedule field: its date and its time, edited independently.
+ *
+ * Shared by start and deadline because the only difference is the default time. Duplicating the
+ * pair is how one of them would end up rebuilding the instant from scratch and resetting the half
+ * the user did not touch.
+ */
+@Composable
+private fun ScheduleRow(
+    dateLabel: String,
+    date: LocalDate,
+    time: LocalTime,
+    context: Context,
+    onDate: (LocalDate) -> Unit,
+    onTime: (LocalTime) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(
+            onClick = {
+                DatePickerDialog(
+                    context,
+                    { _, year, month, day -> onDate(LocalDate.of(year, month + 1, day)) },
+                    date.year,
+                    date.monthValue - 1,
+                    date.dayOfMonth,
+                ).show()
+            },
+        ) { Text(dateLabel) }
+
+        OutlinedButton(
+            onClick = {
+                TimePickerDialog(
+                    context,
+                    { _, hour, minute -> onTime(LocalTime.of(hour, minute)) },
+                    time.hour,
+                    time.minute,
+                    // Follow the device's own 12/24-hour setting rather than assuming 24-hour.
+                    DateFormat.is24HourFormat(context),
+                ).show()
+            },
+        ) { Text(time.format(TIME_FORMAT)) }
+    }
+}
+
+/** Localised, so a 12-hour device reads "2:30 PM" where a 24-hour one reads "14:30". */
+private val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
 
 @Composable
 private fun ProfileRow(profiles: List<PersonProfile>, selectedId: String?, onPick: (String) -> Unit) {

@@ -167,6 +167,33 @@ class WidgetSpecResolverTest {
             )
         }
     }
+
+    @Test
+    fun `a countdown inside one day draws hours and days from the same span`() {
+        // What the time picker made expressible: 09:00 -> 17:00, read at noon.
+        val start = Instant.parse("2026-10-20T09:00:00Z")
+        val end = Instant.parse("2026-10-20T17:00:00Z")
+        val spec = resolver.resolve(
+            config(
+                start = start,
+                end = end,
+                rings = listOf(
+                    RingConfigRecord(TimeCategory.HOURS),
+                    RingConfigRecord(TimeCategory.DAYS),
+                ),
+            ),
+        )!!
+
+        val byCategory = spec.rings.associateBy { it.config.category }
+        assertEquals(5L, byCategory.getValue(TimeCategory.HOURS).count)
+        assertEquals(1L, byCategory.getValue(TimeCategory.DAYS).count)
+        // One span, one fraction: the two rings cannot disagree about how much is left.
+        assertEquals(
+            byCategory.getValue(TimeCategory.HOURS).fraction,
+            byCategory.getValue(TimeCategory.DAYS).fraction,
+            0.0,
+        )
+    }
 }
 
 

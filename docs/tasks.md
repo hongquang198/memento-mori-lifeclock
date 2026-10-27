@@ -377,6 +377,20 @@ not assurances.
   the matrix that would have caught this at the widget boundary), `CountdownModelTest` (HOURS: 240 h
   for 10 days, a partial hour rounds up), `LifeStatsEngineTest` (hours stay inside their day), and
   `CountdownLabelTest`.
+- [x] **F7** Schedule authoring was day-locked while the model was not. Both rows rebuilt the
+  instant from scratch on every pick (`atStartOfDay` for the start, `atTime(23, 59)` for the
+  deadline), so the shortest expressible countdown was one day - and `HOURS`, added in F6, could
+  never show anything `DAYS` did not already show.
+  **Rule now:** each field is a date **and** a time, edited independently, and "editing one half
+  never resets the other" lives in `ScheduleTime` (`withDate`, `withTime`) rather than in two
+  composables - rebuilding on date-pick is exactly what would have turned a chosen 14:30 back into
+  23:59. Defaults keep the old behaviour exactly (start 00:00, deadline 23:59), so no stored span
+  changed meaning. The time dialog follows the device's 12/24-hour setting instead of assuming
+  24-hour, and the label is localised to match.
+  Pinned by `ScheduleTimeTest` (date keeps time, time keeps date, the defaults, and a Berlin
+  spring-forward gap resolving forward) and `WidgetSpecResolverTest` ("a countdown inside one day
+  draws hours and days from the same span": 09:00 -> 17:00 read at noon is 5 h and 1 day, one
+  fraction).
 
 ---
 
