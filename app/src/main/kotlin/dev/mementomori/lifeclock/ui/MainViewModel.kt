@@ -146,10 +146,39 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Reads placements from the platform, never from Glance's cache (M0). */
     fun refreshPlaced() = viewModelScope.launch {
+        _placed.value = loadPlaced()
+    }
+
+    /**
+     * Redraws every placed instance, and says so when a redraw cannot possibly help.
+     *
+     * An instance with no binding draws the setup message however often it is redrawn, so
+     * "Redraw now" used to look broken: nothing changed and nothing explained why. Binding is the
+     * picker's job, so the message points at it. Only the explicit button reports: a save that
+     * triggers a redraw must not nag about an unrelated unbound instance.
+     */
+    fun redrawNow() = viewModelScope.launch {
+        val placed = loadPlaced().also { _placed.value = it }
+        WidgetRefreshScheduler(appContext).refreshNow(reason = "app", force = true)
+
+        val unbound = placed.filter { it.configId == null }
+        if (unbound.isNotEmpty()) {
+            _message.value = unbound.joinToString(prefix = "No config yet: ", separator = ", ") {
+                "#${it.appWidgetId}"
+            } + ". Tap the widget, or press Choose config."
+        }
+    }
+
+    /** The redraw that a save owes the widget. Silent: the save already reported itself. */
+    fun refreshWidgets() {
+        WidgetRefreshScheduler(appContext).refreshNow(reason = "app", force = true)
+    }
+
+    private suspend fun loadPlaced(): List<PlacedWidget> {
         val bindings = deps.bindings.observeAllBindings().first()
         val known = deps.configs.observeAll().first()
 
-        _placed.value = placedWidgetIds(appContext).sorted().map { id ->
+        return placedWidgetIds(appContext).sorted().map { id ->
             val configId = bindingFor(bindings, id)
             PlacedWidget(
                 appWidgetId = id,
@@ -157,10 +186,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 configName = known.firstOrNull { it.configId == configId }?.name,
             )
         }
-    }
-
-    fun refreshWidgets() {
-        WidgetRefreshScheduler(appContext).refreshNow(reason = "app", force = true)
     }
 
     private fun bindingFor(bindings: List<WidgetInstanceBinding>, appWidgetId: Int): String? =

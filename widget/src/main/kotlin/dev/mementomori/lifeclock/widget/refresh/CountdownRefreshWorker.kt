@@ -4,6 +4,8 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import androidx.glance.appwidget.AppWidgetId
+import androidx.glance.session.GlanceSessionManager
+import androidx.glance.session.SessionManagerScope
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
@@ -11,6 +13,8 @@ import dev.mementomori.lifeclock.widget.CountdownWidget
 import dev.mementomori.lifeclock.widget.CountdownWidgetReceiver
 import dev.mementomori.lifeclock.widget.WidgetDependenciesHolder
 import dev.mementomori.lifeclock.widget.WidgetLog
+import dev.mementomori.lifeclock.widget.render.ComposedDraw
+import dev.mementomori.lifeclock.widget.render.processCompositions
 
 /**
  * The one thing that redraws widgets.
@@ -72,11 +76,49 @@ internal suspend fun updatePlacedWidgets(
     context: Context,
     // The seam exists so a test can assert "one draw per placed instance" without Glance's
     // composition, which Robolectric hands to a background session and cannot observe.
-    draw: suspend (AppWidgetId) -> Unit = { CountdownWidget().update(context, it) },
+    draw: suspend (AppWidgetId) -> Unit = { drawFresh(context, it) },
 ): Int {
     val ids = placedWidgetIds(context)
     ids.forEach { draw(AppWidgetId(it)) }
     return ids.size
+}
+
+/**
+ * One update that is guaranteed to compose - or says so in the log.
+ *
+ * Glance hands `update()` to a per-widget session and returns before anything is drawn. When that
+ * session is winding down the hand-off is dropped with no error at all (measured: eight identical
+ * draws 15 s apart produced five compositions, sometimes for only one of the two placed widgets),
+ * so the draw asks again - and closes the stale session first, because every event sent to it is
+ * swallowed too.
+ */
+internal suspend fun drawFresh(context: Context, id: AppWidgetId) {
+    // Close first: a session left over from the previous draw swallows the update outright, so the
+    // plain attempt would only burn the settle timeout before the retry closes it anyway.
+    closeGlanceSession(id.appWidgetId)
+    val composed = ComposedDraw(processCompositions).run(
+        appWidgetId = id.appWidgetId,
+        beforeRetry = { closeGlanceSession(id.appWidgetId) },
+    ) {
+        CountdownWidget().update(context, id)
+    }
+    if (!composed) {
+        WidgetLog.w("draw(${id.appWidgetId}): Glance never composed, the widget keeps its old frame")
+    }
+}
+
+/**
+ * Ends the per-widget Glance session so the next `update()` starts a fresh one.
+ *
+ * Glance ships no supported "compose now" call, and `update()` only *signals* a session; a session
+ * whose event loop has stopped accepts the signal and drops it. `Session.close()` is public, but
+ * the key helper is internal, so the key is spelled out here (Glance 1.1.1:
+ * `"appWidget-" + appWidgetId`). A miss is a no-op, and the retry in [drawFresh] then fails
+ * loudly in the log instead of leaving a stale frame on the home screen.
+ */
+private suspend fun closeGlanceSession(appWidgetId: Int) {
+    val key = "appWidget-$appWidgetId"
+    GlanceSessionManager.runWithLock { getSession(key)?.close() }
 }
 
 /** The platform's list of placed instances. Split out so it can be asserted without composing. */

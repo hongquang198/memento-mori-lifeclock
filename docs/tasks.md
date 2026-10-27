@@ -325,6 +325,31 @@ not assurances.
   Evidence: `dumpsys appwidget` -> `min=(10241x10241)` = 40x40 dp (was 110x110); home screen at 1x1
   renders one 47 dp ring with `10 weeks` inside it. `RingFitTest` pins the 1x1 fit and the font
   floor/ceiling.
+- [x] **F5** A bound widget could keep showing **"Open Memento Mori to choose a countdown"** after
+  the user picked a config and pressed "Redraw now" - the frame was simply never composed.
+  Reported as "I added another widget, selected the countdown, hit redraw, and it still says
+  choose a countdown". Replaying the bind proved the data path was fine
+  (`am start ... APPWIDGET_CONFIGURE --ei appWidgetId 23` -> pick -> `refresh(configure)` ->
+  `render(23): ... label="10 weeks"`), so the defect was one layer down: **`GlanceAppWidget.update()`
+  does not compose.** It hands the request to a per-widget session and returns; when that session is
+  winding down the hand-off is dropped with no exception and no log. Measured on the Pixel 8a
+  (2026-10-27): eight identical draws 15 s apart produced **five** compositions, sometimes for only
+  one of the two placed widgets; three "Redraw now" taps in a row produced one composition. The
+  widget then keeps whatever frame it had - for a freshly bound instance, the setup message.
+  Now: `drawFresh` closes the stale session (Glance has no supported "compose now" call;
+  `Session.close()` is public, the key is `"appWidget-<id>"`), then `CountdownWidget().update()`,
+  and **waits for a composition to be observed** - `provideGlance` bumps a `CompositionProbe`
+  counter, and a draw that produced none is retried up to three times and logged
+  (`draw(22): Glance never composed`) instead of silently leaving a stale frame.
+  Also fixed around it: the setup message names the gesture ("Tap to choose what to show" - the
+  widget carries its own tap action into the picker; the old copy sent the user to the app, where
+  "Redraw now" could not bind anything), `redrawNow()` reports unbound instances in the snackbar,
+  and `WidgetStateLoader` logs *why* it is not drawing (`state(23): no binding`,
+  `bound to missing config <id>`, `'<name>' (TYPE) cannot be drawn, rings=[...]`) - the line that
+  separates "the store says unbound" from "Glance never ran the composition".
+  Evidence after the fix: three "Redraw now" taps -> six `render(...)` lines, both widgets every
+  time (was one composition per three taps). `ComposedDrawTest` pins the retry contract
+  (composed -> not repeated, dropped -> retried and reported, retry hook runs only between attempts).
 
 ---
 

@@ -15,9 +15,11 @@ import dev.mementomori.lifeclock.widget.ring.CachedRingRenderer
 import dev.mementomori.lifeclock.widget.refresh.UnbindWidgetsWorker
 import dev.mementomori.lifeclock.widget.content.WidgetContent
 import dev.mementomori.lifeclock.widget.refresh.WidgetRefreshScheduler
+import dev.mementomori.lifeclock.widget.render.ComposedDraw
 import dev.mementomori.lifeclock.widget.render.RingRasterizer
 import dev.mementomori.lifeclock.widget.render.WidgetStateLoader
 import dev.mementomori.lifeclock.widget.render.appWidgetWidthDp
+import dev.mementomori.lifeclock.widget.render.processCompositions
 import dev.mementomori.lifeclock.widget.config.configureIntent
 
 /**
@@ -32,6 +34,9 @@ class CountdownWidget : GlanceAppWidget() {
         val dependencies = WidgetDependenciesHolder.current
             ?: error("WidgetDependenciesHolder.current must be set in Application.onCreate")
         val appWidgetId = (id as? AppWidgetId)?.appWidgetId
+        // First line of the composition: the draw path waits on this to tell "composed" from
+        // "Glance dropped the request" (see CompositionProbe).
+        appWidgetId?.let(processCompositions::mark)
         val state = WidgetStateLoader(
             dependencies,
             RingRasterizer.create(context, processRingRenderer),

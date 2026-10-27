@@ -27,10 +27,19 @@ class WidgetStateLoader(
     private val context: Context,
 ) {
     suspend fun load(glanceId: String, cellWidthDp: Int? = null): WidgetState {
+        // Every early return says why, once. Without this line a widget that keeps showing the
+        // setup message is indistinguishable from one whose composition never ran at all - the
+        // difference between "the store says unbound" and "Glance dropped the frame".
         val binding = dependencies.bindings.observeBinding(glanceId).first()
-            ?: return WidgetState.Unconfigured
+        if (binding == null) {
+            WidgetLog.w("state($glanceId): no binding, showing the setup message")
+            return WidgetState.Unconfigured
+        }
         val config = dependencies.configs.observe(binding.configId).first()
-            ?: return WidgetState.Unconfigured
+        if (config == null) {
+            WidgetLog.w("state($glanceId): bound to missing config ${binding.configId}")
+            return WidgetState.Unconfigured
+        }
 
         // Life clocks need their profile before the resolver runs; a countdown never touches it.
         val snapshot = if (config.type == WidgetType.LIFE_CLOCK) lifeSnapshot(config) else null
@@ -39,7 +48,14 @@ class WidgetStateLoader(
             countdownModel = dependencies.countdownModel,
             clock = dependencies.clock,
             zone = dependencies.zone,
-        ).resolve(config, snapshot) ?: return WidgetState.Unsupported
+        ).resolve(config, snapshot)
+        if (spec == null) {
+            WidgetLog.w(
+                "state($glanceId): '${config.name}' (${config.type}) cannot be drawn, " +
+                    "rings=${config.rings.map { it.category }}",
+            )
+            return WidgetState.Unsupported
+        }
 
         val rings = rasterizer.rasterize(
             rings = spec.rings,

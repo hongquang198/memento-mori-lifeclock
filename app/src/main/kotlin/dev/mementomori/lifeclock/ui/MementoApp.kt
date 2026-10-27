@@ -240,7 +240,7 @@ private fun WidgetsScreen(viewModel: MainViewModel) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Widget #${widget.appWidgetId}", fontWeight = FontWeight.Medium)
                     Text(
-                        widget.configName ?: "Not configured",
+                        widget.configName ?: "Not configured - press Choose config",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -255,7 +255,7 @@ private fun WidgetsScreen(viewModel: MainViewModel) {
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { viewModel.refreshWidgets() }) { Text("Redraw now") }
+                Button(onClick = { viewModel.redrawNow() }) { Text("Redraw now") }
                 OutlinedButton(onClick = { viewModel.refreshPlaced() }) { Text("Refresh list") }
             }
         }

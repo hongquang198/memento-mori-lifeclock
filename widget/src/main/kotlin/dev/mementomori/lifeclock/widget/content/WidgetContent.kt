@@ -125,10 +125,15 @@ private fun Message(text: String) {
     Text(text = text, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 13.sp))
 }
 
-/** Copy for states that have no config to draw. Kept here so the composable needs no resources. */
+/**
+ * Copy for states that have no config to draw. Kept here so the composable needs no resources.
+ *
+ * Both messages name the gesture, not the app: the widget carries its own tap action into the
+ * picker, so "open the app" sent users to a screen where nothing they could press would bind it.
+ */
 internal object WidgetCopy {
-    const val UNCONFIGURED = "Open Memento Mori to choose a countdown"
-    const val UNSUPPORTED = "Open Memento Mori to finish setting this up"
+    const val UNCONFIGURED = "Tap to choose what to show"
+    const val UNSUPPORTED = "Tap to finish setting this up"
 }
 
 
