@@ -2,7 +2,6 @@ package dev.mementomori.lifeclock.widget.render
 
 import android.content.Context
 import android.graphics.Bitmap
-import dev.mementomori.lifeclock.model.RingConfigRecord
 import dev.mementomori.lifeclock.widget.R
 import dev.mementomori.lifeclock.widget.ring.CanvasRingRenderer
 import dev.mementomori.lifeclock.widget.ring.RingRenderer
@@ -25,13 +24,13 @@ class RingRasterizer(
     /**
      * @param cellWidthDp the launcher cell, when drawing into a widget. Null for a preview, which
      *   has no cell to fit into.
-     * @param labelFor overrides the authored label (a life clock shows its own count).
+     * @param labelFor overrides the authored label: a computed ring shows its own count.
      * @param onRendered receives one line per ring; the caller decides where it goes.
      */
     fun rasterize(
         rings: List<RingSpec>,
         cellWidthDp: Int? = null,
-        labelFor: (RingConfigRecord) -> String? = { null },
+        labelFor: (RingSpec) -> String? = { null },
         onRendered: (String) -> Unit = {},
     ): List<RenderedRing> = rings.map { ring ->
         val style = styleResolver.resolve(ring.config.style)
@@ -39,7 +38,7 @@ class RingRasterizer(
         val fitted = style.copy(diameterPx = (diameterDp * density).roundToInt())
         val bitmap: Bitmap = renderer.render(fitted, ring.fraction)
 
-        val label = labelFor(ring.config) ?: style.label
+        val label = labelFor(ring) ?: style.label
         onRendered(
             "fraction=${ring.fraction} bitmap=${bitmap.width}x${bitmap.height} " +
                 "cell=${cellWidthDp ?: "?"}dp label=\"$label\"",
@@ -70,3 +69,5 @@ class RingRasterizer(
         }
     }
 }
+
+

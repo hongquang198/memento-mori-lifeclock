@@ -69,12 +69,7 @@ private fun ReadyContent(state: WidgetState.Ready) {
         }
     }
 
-    val chronometer = state.chronometer
-    if (chronometer != null) {
-        AndroidRemoteViews(chronometer)
-    } else {
-        state.readout?.let { Readout(it) }
-    }
+    state.chronometer?.let { AndroidRemoteViews(it) }
 }
 
 @Composable
@@ -115,15 +110,6 @@ private fun Label(text: String) {
     Text(text = text, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 13.sp))
 }
 
-/** The static counterpart of the Chronometer: same size and place, without the ticking. */
-@Composable
-private fun Readout(text: String) {
-    Text(
-        text = text,
-        style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 18.sp),
-        modifier = GlanceModifier.padding(top = 6.dp),
-    )
-}
 
 @Composable
 private fun Message(text: String) {
@@ -135,3 +121,4 @@ internal object WidgetCopy {
     const val UNCONFIGURED = "Open Memento Mori to choose a countdown"
     const val UNSUPPORTED = "Open Memento Mori to finish setting this up"
 }
+

@@ -9,6 +9,7 @@ import android.widget.RemoteViews
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
 import dev.mementomori.lifeclock.mortality.LifeSnapshot
+import dev.mementomori.lifeclock.time.CountdownLabel
 import dev.mementomori.lifeclock.widget.WidgetDependencies
 import dev.mementomori.lifeclock.widget.WidgetLog
 import dev.mementomori.lifeclock.widget.content.ChronometerViews
@@ -43,16 +44,19 @@ class WidgetStateLoader(
         val rings = rasterizer.rasterize(
             rings = spec.rings,
             cellWidthDp = cellWidthDp,
-            // A life clock's point is the number, so the ring's own count replaces the static label.
-            // A countdown keeps its authored label; its number ticks in the Chronometer below.
-            labelFor = { ring -> snapshot?.stats?.get(ring.category)?.let(LifeStatText::of) },
+            // The ring's number is the point: a life clock shows the engine's stat, a countdown
+            // shows its own count in its own unit ("10 weeks", "3 months"), never another ring's.
+            labelFor = { ring ->
+                snapshot?.stats?.get(ring.config.category)?.let(LifeStatText::of)
+                    ?: ring.count?.let { CountdownLabel.of(it, ring.config.category) }
+            },
             onRendered = { line -> WidgetLog.i("render($glanceId): $line") },
         )
 
         return WidgetState.Ready(
             rings = rings,
             chronometer = chronometerFor(spec.chronometerMillis),
-            readout = spec.readout,
+
             layout = config.layout,
         )
     }
@@ -76,3 +80,4 @@ class WidgetStateLoader(
         return ChronometerViews.build(context, base)
     }
 }
+

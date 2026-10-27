@@ -63,12 +63,12 @@ class WidgetSpecResolverTest {
     }
 
     @Test
-    fun `a countdown over a day reads in its unit, not total hours`() {
+    fun `a countdown over a day carries its count instead of a clock`() {
         val spec = resolver.resolve(config())!!
 
-        // 5 days out: a Chronometer would render "120:00:00", so the readout takes the ring's unit.
+        // 5 days out: a Chronometer would render "120:00:00", so the ring carries its own count.
         assertNull(spec.chronometerMillis)
-        assertEquals("5 days", spec.readout)
+        assertEquals(5L, spec.rings.single().count)
     }
 
     @Test
@@ -78,17 +78,18 @@ class WidgetSpecResolverTest {
         )!!
 
         assertEquals(Duration.ofHours(3).toMillis(), spec.chronometerMillis)
-        assertNull(spec.readout)
+        // The ring still says "1 day"; the clock below it is the live part.
+        assertEquals(1L, spec.rings.single().count)
     }
 
     @Test
-    fun `the readout uses the primary ring's own count`() {
+    fun `every ring carries the count for its own unit`() {
         val spec = resolver.resolve(
             config(rings = listOf(RingConfigRecord(TimeCategory.WEEKS), RingConfigRecord(TimeCategory.DAYS))),
         )!!
 
-        // 5 days is one week rounded up, and the first ring is the one that speaks.
-        assertEquals("1 week", spec.readout)
+        // 5 days is one week rounded up; each ring speaks for itself, none borrows another's count.
+        assertEquals(listOf(1L, 5L), spec.rings.map { it.count })
     }
 
     @Test
@@ -96,7 +97,7 @@ class WidgetSpecResolverTest {
         val spec = resolver.resolve(
             config(start = now.minus(Duration.ofDays(10)), end = now.minus(Duration.ofDays(2))),
         )!!
-        assertEquals("0 days", spec.readout)
+        assertEquals(0L, spec.rings.single().count)
         assertEquals(0.0, spec.rings.single().fraction, 1e-9)
     }
 
@@ -151,5 +152,6 @@ class WidgetSpecResolverTest {
         assertNull(spec)
     }
 }
+
 
 

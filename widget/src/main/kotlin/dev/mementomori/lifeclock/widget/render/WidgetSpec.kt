@@ -4,15 +4,21 @@ import dev.mementomori.lifeclock.model.RingConfigRecord
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
 import dev.mementomori.lifeclock.mortality.LifeSnapshot
-import dev.mementomori.lifeclock.time.CountdownLabel
 import dev.mementomori.lifeclock.time.Clock
 import dev.mementomori.lifeclock.time.CountdownModel
 import dev.mementomori.lifeclock.time.CountdownTarget
 import java.time.Instant
 import java.time.ZoneId
 
-/** One arc to draw: the stored appearance plus the fraction it was computed to. */
-data class RingSpec(val config: RingConfigRecord, val fraction: Double)
+/**
+ * One arc to draw: the stored appearance, the fraction it was computed to, and - for a countdown -
+ * its own count, so the label can say "10 weeks" without borrowing another ring's number.
+ */
+data class RingSpec(
+    val config: RingConfigRecord,
+    val fraction: Double,
+    val count: Long? = null,
+)
 
 /** What a widget should show, decided with no Android and no IO. */
 data class WidgetSpec(
@@ -23,8 +29,6 @@ data class WidgetSpec(
      * no deadline to tick toward.
      */
     val chronometerMillis: Long?,
-    /** The coarse readout in the ring's unit ("66 days") when a clock would be unreadable. */
-    val readout: String? = null,
 )
 
 /** Below one day, total hours are still a time a person reads fluently. */
@@ -58,23 +62,20 @@ class WidgetSpecResolver(
         )
         val slices = countdownModel.slices(target, now, zone).associateBy { it.category }
         val rings = config.rings.mapNotNull { ring ->
-            slices[ring.category]?.let { RingSpec(ring, it.fractionRemaining) }
+            slices[ring.category]?.let { slice ->
+                RingSpec(ring, slice.fractionRemaining, slice.remaining)
+            }
         }
         if (rings.isEmpty()) return null
 
         // A missed deadline reads as zero rather than a negative Chronometer target.
         val remaining = (end - now.toEpochMilli()).coerceAtLeast(0)
-        val primary = slices.getValue(rings.first().config.category)
 
         // A Chronometer renders total H:MM:SS, so it is honest only inside the last day - and not
         // at zero, where it would count up. Everything above that reads in the ring's own unit.
         val live = remaining.takeIf { it in 1 until MILLIS_PER_DAY }
 
-        return WidgetSpec(
-            rings = rings,
-            chronometerMillis = live,
-            readout = if (live == null) CountdownLabel.of(primary.remaining, primary.category) else null,
-        )
+        return WidgetSpec(rings = rings, chronometerMillis = live)
     }
 
     /**
@@ -93,4 +94,5 @@ class WidgetSpecResolver(
         return WidgetSpec(rings = rings, chronometerMillis = null)
     }
 }
+
 

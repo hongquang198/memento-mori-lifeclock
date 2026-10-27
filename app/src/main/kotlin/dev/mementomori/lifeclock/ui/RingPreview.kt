@@ -25,6 +25,7 @@ import dev.mementomori.lifeclock.widget.render.LayoutPlan
 import dev.mementomori.lifeclock.widget.render.LifeStatText
 import dev.mementomori.lifeclock.widget.render.RenderedRing
 import dev.mementomori.lifeclock.widget.render.RingRasterizer
+import dev.mementomori.lifeclock.time.CountdownLabel
 import dev.mementomori.lifeclock.widget.render.WidgetSpec
 import kotlin.math.roundToInt
 
@@ -49,7 +50,10 @@ fun RingPreview(
             rasterizer.rasterize(
                 rings = resolved.rings,
                 cellWidthDp = null,
-                labelFor = { ring -> snapshot?.stats?.get(ring.category)?.let(LifeStatText::of) },
+                labelFor = { ring ->
+                    snapshot?.stats?.get(ring.config.category)?.let(LifeStatText::of)
+                        ?: ring.count?.let { CountdownLabel.of(it, ring.config.category) }
+                },
             )
         } ?: emptyList()
     }
@@ -67,13 +71,13 @@ fun RingPreview(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+                    planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, true) }
                 }
 
                 dev.mementomori.lifeclock.model.WidgetLayout.GRID -> Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+                    planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, true) }
                 }
 
                 dev.mementomori.lifeclock.model.WidgetLayout.CONCENTRIC -> Box(
@@ -83,10 +87,9 @@ fun RingPreview(
                 }
             }
 
-            // The readout the widget draws under the ring: the coarse unit count, or the clock
-            // string the platform Chronometer owns there (the preview has to stand in for it).
-            val readout = spec?.readout ?: spec?.chronometerMillis?.let(::clockText)
-            readout?.let {
+            // The widget's live Chronometer can only sit outside the bitmap; the preview stands in
+            // for it with the same H:MM:SS the platform would render.
+            spec?.chronometerMillis?.let(::clockText)?.let {
                 Text(it, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
             }
 
@@ -129,3 +132,5 @@ private fun PreviewRing(ring: RenderedRing, scale: Float, showLabel: Boolean) {
         }
     }
 }
+
+

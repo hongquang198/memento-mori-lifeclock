@@ -86,15 +86,6 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `a coarse countdown shows its unit instead of a clock`() = runGlanceAppWidgetUnitTest {
-        val state = WidgetState.Ready(rings = listOf(ring()), chronometer = null, readout = "66 days")
-
-        provideComposable { WidgetContent(state) }
-
-        onNode(hasText("66 days")).assertExists()
-    }
-
-    @Test
     fun `an unconfigured widget explains itself instead of drawing an empty ring`() =
         runGlanceAppWidgetUnitTest {
             provideComposable { WidgetContent(WidgetState.Unconfigured) }
@@ -109,3 +100,4 @@ class WidgetContentTest {
         onNode(hasText(WidgetCopy.UNSUPPORTED)).assertExists()
     }
 }
+
