@@ -59,33 +59,48 @@ fun RingPreview(
         modifier = modifier.fillMaxWidth().heightIn(min = 180.dp).padding(8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        when (config.layout) {
-            dev.mementomori.lifeclock.model.WidgetLayout.SINGLE,
-            dev.mementomori.lifeclock.model.WidgetLayout.STACK,
-            -> Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            when (config.layout) {
+                dev.mementomori.lifeclock.model.WidgetLayout.SINGLE,
+                dev.mementomori.lifeclock.model.WidgetLayout.STACK,
+                -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+                }
+
+                dev.mementomori.lifeclock.model.WidgetLayout.GRID -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+                }
+
+                dev.mementomori.lifeclock.model.WidgetLayout.CONCENTRIC -> Box(
+                    contentAlignment = Alignment.Center,
+                ) {
+                    planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+                }
             }
 
-            dev.mementomori.lifeclock.model.WidgetLayout.GRID -> Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+            // The readout the widget draws under the ring: the coarse unit count, or the clock
+            // string the platform Chronometer owns there (the preview has to stand in for it).
+            val readout = spec?.readout ?: spec?.chronometerMillis?.let(::clockText)
+            readout?.let {
+                Text(it, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
             }
 
-            dev.mementomori.lifeclock.model.WidgetLayout.CONCENTRIC -> Box(
-                contentAlignment = Alignment.Center,
-            ) {
-                planned.forEach { slot -> PreviewRing(rings[slot.index], slot.scale, slot.index == 0) }
+            if (rings.isEmpty()) {
+                Text("Nothing to preview yet", style = MaterialTheme.typography.bodySmall)
             }
-        }
-
-        if (rings.isEmpty()) {
-            Text("Nothing to preview yet", style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+/** Preview-only stand-in for the platform Chronometer's `H:MM:SS`. */
+private fun clockText(millis: Long): String {
+    val seconds = millis / 1000
+    return "%d:%02d:%02d".format(seconds / 3600, (seconds % 3600) / 60, seconds % 60)
 }
 
 @Composable

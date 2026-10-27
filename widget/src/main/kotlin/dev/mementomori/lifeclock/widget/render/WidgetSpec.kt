@@ -4,6 +4,7 @@ import dev.mementomori.lifeclock.model.RingConfigRecord
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
 import dev.mementomori.lifeclock.mortality.LifeSnapshot
+import dev.mementomori.lifeclock.time.CountdownLabel
 import dev.mementomori.lifeclock.time.Clock
 import dev.mementomori.lifeclock.time.CountdownModel
 import dev.mementomori.lifeclock.time.CountdownTarget
@@ -17,11 +18,17 @@ data class RingSpec(val config: RingConfigRecord, val fraction: Double)
 data class WidgetSpec(
     val rings: List<RingSpec>,
     /**
-     * Drives the live `Chronometer`. Null for a life clock: it has no deadline to tick toward, and
-     * a zero here would render a stopwatch counting *up* from the last draw.
+     * Drives the live `Chronometer`, and only inside the last day: above that the platform view
+     * renders total hours ("1568:37:23" for a 65-day countdown). Null for a life clock, which has
+     * no deadline to tick toward.
      */
-    val remainingMillis: Long?,
+    val chronometerMillis: Long?,
+    /** The coarse readout in the ring's unit ("66 days") when a clock would be unreadable. */
+    val readout: String? = null,
 )
+
+/** Below one day, total hours are still a time a person reads fluently. */
+private const val MILLIS_PER_DAY = 86_400_000L
 
 /**
  * Config + time -> what to draw.
@@ -55,10 +62,18 @@ class WidgetSpecResolver(
         }
         if (rings.isEmpty()) return null
 
+        // A missed deadline reads as zero rather than a negative Chronometer target.
+        val remaining = (end - now.toEpochMilli()).coerceAtLeast(0)
+        val primary = slices.getValue(rings.first().config.category)
+
+        // A Chronometer renders total H:MM:SS, so it is honest only inside the last day - and not
+        // at zero, where it would count up. Everything above that reads in the ring's own unit.
+        val live = remaining.takeIf { it in 1 until MILLIS_PER_DAY }
+
         return WidgetSpec(
             rings = rings,
-            // A missed deadline reads as zero rather than a negative Chronometer target.
-            remainingMillis = (end - now.toEpochMilli()).coerceAtLeast(0),
+            chronometerMillis = live,
+            readout = if (live == null) CountdownLabel.of(primary.remaining, primary.category) else null,
         )
     }
 
@@ -75,6 +90,7 @@ class WidgetSpecResolver(
         }
         if (rings.isEmpty()) return null
 
-        return WidgetSpec(rings = rings, remainingMillis = null)
+        return WidgetSpec(rings = rings, chronometerMillis = null)
     }
 }
+

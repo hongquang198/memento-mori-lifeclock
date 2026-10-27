@@ -51,7 +51,8 @@ class WidgetStateLoader(
 
         return WidgetState.Ready(
             rings = rings,
-            chronometer = chronometerFor(spec.remainingMillis),
+            chronometer = chronometerFor(spec.chronometerMillis),
+            readout = spec.readout,
             layout = config.layout,
         )
     }

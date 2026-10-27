@@ -19,6 +19,8 @@ sealed interface WidgetState {
         /** Null where a nested RemoteViews is unavailable, so the widget shows ring + label only. */
         val chronometer: RemoteViews?,
         val layout: WidgetLayout = WidgetLayout.SINGLE,
+        /** Coarse readout ("66 days") drawn when a live clock would be unreadable. */
+        val readout: String? = null,
     ) : WidgetState
 }
 

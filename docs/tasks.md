@@ -286,6 +286,23 @@ not assurances.
 
 ---
 
+## Post-M5 fixes
+- [x] **F1** Countdown readout was unit-blind. On device a 65-day countdown rendered
+  `1568:37:23` - the platform `Chronometer`'s *total* hours - whatever the ring's category, with no
+  unit anywhere in the widget.
+  **Rule now:** the readout's unit follows the ring's unit. A `Chronometer` can only render
+  `H:MM:SS`, so it is used only inside the last day (`0 < remaining < 24h`; at zero it would count
+  up); above that the widget draws `CountdownLabel.of(slice.remaining, category)` - the same count
+  the arc was drawn from, so text and ring cannot disagree.
+  Evidence: `1568:37:23` -> `10 weeks` (WEEKS ring, 65.4 days), `render(20): fraction=0.9969
+  bitmap=326x326 cell=140dp`. Pinned by `CountdownLabelTest` (5 cases) + `WidgetSpecResolverTest`
+  ("a countdown over a day reads in its unit", "inside the last day the live chronometer takes
+  over", "the readout uses the primary ring's own count") + `WidgetContentTest` (readout node).
+  Preview parity: `RingPreview` draws the same readout, standing in for the Chronometer with
+  `clockText()` below a day.
+
+---
+
 ## Cross-cutting (run on every PR)
 - [ ] `./gradlew test` — pure-JVM unit tests.
 - [ ] `./gradlew :widget:verifyRoborazziDebug` (or Paparazzi) — screenshot goldens.

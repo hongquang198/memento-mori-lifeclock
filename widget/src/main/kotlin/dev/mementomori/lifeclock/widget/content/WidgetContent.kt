@@ -69,7 +69,12 @@ private fun ReadyContent(state: WidgetState.Ready) {
         }
     }
 
-    state.chronometer?.let { AndroidRemoteViews(it) }
+    val chronometer = state.chronometer
+    if (chronometer != null) {
+        AndroidRemoteViews(chronometer)
+    } else {
+        state.readout?.let { Readout(it) }
+    }
 }
 
 @Composable
@@ -108,6 +113,16 @@ private fun RingImage(ring: RenderedRing) {
 private fun Label(text: String) {
     if (text.isBlank()) return
     Text(text = text, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 13.sp))
+}
+
+/** The static counterpart of the Chronometer: same size and place, without the ticking. */
+@Composable
+private fun Readout(text: String) {
+    Text(
+        text = text,
+        style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 18.sp),
+        modifier = GlanceModifier.padding(top = 6.dp),
+    )
 }
 
 @Composable

@@ -63,8 +63,32 @@ class WidgetSpecResolverTest {
     }
 
     @Test
-    fun `remaining millis drives the live chronometer`() {
-        assertEquals(Duration.ofDays(5).toMillis(), resolver.resolve(config())!!.remainingMillis!!)
+    fun `a countdown over a day reads in its unit, not total hours`() {
+        val spec = resolver.resolve(config())!!
+
+        // 5 days out: a Chronometer would render "120:00:00", so the readout takes the ring's unit.
+        assertNull(spec.chronometerMillis)
+        assertEquals("5 days", spec.readout)
+    }
+
+    @Test
+    fun `inside the last day the live chronometer takes over`() {
+        val spec = resolver.resolve(
+            config(start = now.minus(Duration.ofDays(10)), end = now.plus(Duration.ofHours(3))),
+        )!!
+
+        assertEquals(Duration.ofHours(3).toMillis(), spec.chronometerMillis)
+        assertNull(spec.readout)
+    }
+
+    @Test
+    fun `the readout uses the primary ring's own count`() {
+        val spec = resolver.resolve(
+            config(rings = listOf(RingConfigRecord(TimeCategory.WEEKS), RingConfigRecord(TimeCategory.DAYS))),
+        )!!
+
+        // 5 days is one week rounded up, and the first ring is the one that speaks.
+        assertEquals("1 week", spec.readout)
     }
 
     @Test
@@ -72,7 +96,7 @@ class WidgetSpecResolverTest {
         val spec = resolver.resolve(
             config(start = now.minus(Duration.ofDays(10)), end = now.minus(Duration.ofDays(2))),
         )!!
-        assertEquals(0L, spec.remainingMillis)
+        assertEquals("0 days", spec.readout)
         assertEquals(0.0, spec.rings.single().fraction, 1e-9)
     }
 
@@ -103,7 +127,7 @@ class WidgetSpecResolverTest {
             0.0,
         )
         // A zero here would render a stopwatch counting up from the last draw.
-        assertNull(spec.remainingMillis)
+        assertNull(spec.chronometerMillis)
     }
 
     @Test
@@ -127,3 +151,5 @@ class WidgetSpecResolverTest {
         assertNull(spec)
     }
 }
+
+
