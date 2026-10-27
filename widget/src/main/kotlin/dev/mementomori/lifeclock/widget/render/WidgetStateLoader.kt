@@ -79,7 +79,11 @@ class WidgetStateLoader(
             )
         }
 
-        return WidgetState.Ready(rings = rings, chronometer = chronometerFor(spec.remainingMillis))
+        return WidgetState.Ready(
+            rings = rings,
+            chronometer = chronometerFor(spec.remainingMillis),
+            layout = config.layout,
+        )
     }
 
     /**

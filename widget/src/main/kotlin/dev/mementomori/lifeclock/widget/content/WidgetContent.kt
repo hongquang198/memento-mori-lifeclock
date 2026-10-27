@@ -11,14 +11,18 @@ import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.Row
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import dev.mementomori.lifeclock.model.LabelPlacement
+import dev.mementomori.lifeclock.model.WidgetLayout
+import dev.mementomori.lifeclock.widget.render.LayoutPlan
 import dev.mementomori.lifeclock.widget.render.RenderedRing
 import dev.mementomori.lifeclock.widget.render.WidgetState
+import kotlin.math.roundToInt
 
 /**
  * The widget's only composable. Takes a finished [WidgetState], so it can be composed in a unit
@@ -43,25 +47,51 @@ fun WidgetContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier)
 
 @Composable
 private fun ReadyContent(state: WidgetState.Ready) {
-    state.rings.forEach { ring -> Ring(ring) }
+    val planned = LayoutPlan.plan(state.layout, state.rings.size)
+
+    when (state.layout) {
+        WidgetLayout.SINGLE, WidgetLayout.STACK -> Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            planned.forEach { slot -> Ring(state.rings[slot.index]) }
+        }
+
+        WidgetLayout.GRID -> Row(horizontalAlignment = Alignment.CenterHorizontally) {
+            planned.forEach { slot -> Ring(state.rings[slot.index]) }
+        }
+
+        WidgetLayout.CONCENTRIC -> Box(contentAlignment = Alignment.Center) {
+            // Outermost first so the inner arcs paint on top; only the first ring's label is drawn,
+            // because three labels inside one circle is noise, not information.
+            planned.forEach { slot ->
+                Ring(state.rings[slot.index], scale = slot.scale, showLabel = slot.index == 0)
+            }
+        }
+    }
+
     state.chronometer?.let { AndroidRemoteViews(it) }
 }
 
 @Composable
-private fun Ring(ring: RenderedRing) {
-    when (ring.labelPlacement) {
+private fun Ring(ring: RenderedRing, scale: Float = 1f, showLabel: Boolean = true) {
+    val scaled = ring.copy(sizeDp = (ring.sizeDp * scale).roundToInt())
+    when {
+        !showLabel -> RingImage(scaled)
+
         // The label sits on top of the bitmap; the bitmap itself never contains text.
-        LabelPlacement.INSIDE -> Box(contentAlignment = Alignment.Center) {
-            RingImage(ring)
+        ring.labelPlacement == LabelPlacement.INSIDE -> Box(contentAlignment = Alignment.Center) {
+            RingImage(scaled)
             Label(ring.label)
         }
 
-        LabelPlacement.UNDER -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            RingImage(ring)
+        ring.labelPlacement == LabelPlacement.UNDER -> Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            RingImage(scaled)
             Label(ring.label)
         }
 
-        LabelPlacement.NONE -> RingImage(ring)
+        else -> RingImage(scaled)
     }
 }
 

@@ -3,6 +3,7 @@ package dev.mementomori.lifeclock.widget.render
 import android.graphics.Bitmap
 import android.widget.RemoteViews
 import dev.mementomori.lifeclock.model.LabelPlacement
+import dev.mementomori.lifeclock.model.WidgetLayout
 
 /** Everything the composition needs, resolved before composing: Glance cannot do IO or drawing. */
 sealed interface WidgetState {
@@ -17,6 +18,7 @@ sealed interface WidgetState {
         val rings: List<RenderedRing>,
         /** Null where a nested RemoteViews is unavailable, so the widget shows ring + label only. */
         val chronometer: RemoteViews?,
+        val layout: WidgetLayout = WidgetLayout.SINGLE,
     ) : WidgetState
 }
 

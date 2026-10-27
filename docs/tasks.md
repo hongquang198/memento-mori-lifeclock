@@ -180,10 +180,16 @@ same widget renders differently across launchers.
 widget" (T4.16) — a common place for widgets to drift from their preview.
 
 ### Appearance editor (feature C)
-- [ ] **T4.1** Tests: `RingTemplate` seeds the documented `WidgetConfigRecord` (one test per preset).
-- [ ] **T4.2** Impl: `RingTemplate` enum (Classic, Compact, Bold, Minimal, Concentric, Gallery, Custom) + seeding; editing any knob sets `template = CUSTOM`.
-- [ ] **T4.3** Tests: `WidgetLayout` arrangements (SINGLE/STACK/GRID/CONCENTRIC); `CONCENTRIC` draws N nested arcs in one bitmap.
-- [ ] **T4.4** Impl: layout renderers; concentric multi-arc rendering.
+- [x] **T4.1** Tests: `RingPresetsTest` pins every preset (diameter, stroke, placement, layout, rings).
+- [x] **T4.2** Impl: `RingPresets` in `:core:model` (Classic, Compact, Bold, Minimal, Concentric,
+  Gallery) + `apply()` that keeps identity/target and replaces appearance; `CUSTOM` is an outcome,
+  so seeding it throws instead of inventing a look.
+- [x] **T4.3** Tests: `LayoutPlanTest` - SINGLE draws the first ring only, STACK/GRID draw all,
+  CONCENTRIC nests with a 0.22 step and never below 0.3. **Deviation:** CONCENTRIC composes N
+  bitmaps in a `Box` rather than drawing N arcs in one `Canvas` pass - identical pixels, no new
+  renderer, and each ring keeps its own style/colour.
+- [x] **T4.4** Impl: `LayoutPlan` (pure) + the four arrangements in `WidgetContent`; `WidgetState.Ready`
+  carries the config's layout.
 - [ ] **T4.5** Tests: label placement `INSIDE` (`Box` overlay) vs `UNDER` (`Column`); `NONE` renders no text.
 - [ ] **T4.6** Impl: label widget tree per placement (text **not** baked into bitmap).
 - [ ] **T4.7** Tests (Compose UI): editing diameter/color/stroke/label updates the **live preview** and persists.
