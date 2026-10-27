@@ -109,4 +109,9 @@ internal object ProcessRefreshGate {
         instance ?: synchronized(this) {
             instance ?: RefreshGate(dependencies).also { instance = it }
         }
+
+    /** Robolectric reuses one sandbox per `@Config`, so the singleton outlives a test class. */
+    internal fun resetForTest() {
+        synchronized(this) { instance = null }
+    }
 }

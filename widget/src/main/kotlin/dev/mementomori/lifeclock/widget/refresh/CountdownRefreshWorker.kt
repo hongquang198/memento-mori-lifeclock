@@ -49,8 +49,10 @@ class CountdownRefreshWorker(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Throwable) {
-            WidgetLog.w("refresh($reason) failed", error)
-            Result.failure()
+            // Not Result.failure(): the gate leaves the boundary REFRESHED, so the draw is owed.
+            // failure() is terminal and the next attempt would be the 15 minute heartbeat.
+            WidgetLog.w("refresh($reason) failed, retrying", error)
+            Result.retry()
         }
     }
 }
