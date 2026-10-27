@@ -52,7 +52,10 @@ Injected at every boundary. Production: `Clock.systemUTC()`. Tests: `FakeClock`.
 ### 2.2 Countdown engine (`:core:time`)
 ```kotlin
 // TimeCategory lives in :core:model - persisted configs and the UI reference it too.
-enum class TimeCategory { DAYS, WEEKS, MONTHS, NET_FREE_HOURS }
+// `emitted` is the authoring contract: a category is offered only if an engine produces it.
+enum class TimeCategory(val emitted: Boolean) {
+    HOURS(true), DAYS(true), WEEKS(true), MONTHS(true), NET_FREE_HOURS(false)
+}
 
 /** A single ring's data: how much is left and how full the ring should be. */
 data class TimeSlice(

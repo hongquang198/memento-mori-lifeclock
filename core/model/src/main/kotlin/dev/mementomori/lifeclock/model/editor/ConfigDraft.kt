@@ -8,11 +8,15 @@ import dev.mementomori.lifeclock.model.TimeCategory
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetLayout
 import dev.mementomori.lifeclock.model.WidgetType
+import dev.mementomori.lifeclock.model.hasDrawableRing
 
 /** Why a config cannot be saved. Named so the editor can point at the field, not a toast. */
 enum class ConfigProblem {
     NAME_BLANK,
     NO_RINGS,
+
+    /** Rings exist, but every one asks for a category no engine emits: nothing could ever draw. */
+    NO_DRAWABLE_RINGS,
     MISSING_DEADLINE,
     DEADLINE_NOT_AFTER_START,
     MISSING_PROFILE,
@@ -58,6 +62,9 @@ data class ConfigDraft(val value: WidgetConfigRecord) {
      * bold widget does not silently produce a thin default ring next to it.
      */
     fun withCategory(category: TimeCategory, enabled: Boolean): ConfigDraft {
+        // A ring nobody can draw is not a choice, it is a trap: it saves fine and renders empty.
+        if (!category.emitted) return this
+
         val existing = value.rings.any { it.category == category }
         val rings = when {
             enabled && !existing -> value.rings + RingConfigRecord(
@@ -81,6 +88,9 @@ data class ConfigDraft(val value: WidgetConfigRecord) {
     fun validate(): List<ConfigProblem> = buildList {
         if (value.name.isBlank()) add(ConfigProblem.NAME_BLANK)
         if (value.rings.isEmpty()) add(ConfigProblem.NO_RINGS)
+        if (value.rings.isNotEmpty() && !value.hasDrawableRing) {
+            add(ConfigProblem.NO_DRAWABLE_RINGS)
+        }
 
         when (value.type) {
             WidgetType.COUNTDOWN -> {
@@ -98,6 +108,22 @@ data class ConfigDraft(val value: WidgetConfigRecord) {
     }
 
     fun isValid(): Boolean = validate().isEmpty()
+
+    /**
+     * Drops rings no engine emits, keeping one drawable ring if that empties the list.
+     *
+     * Opening the editor is the repair path for configs saved before this rule existed. The
+     * substitute keeps the first ring's style, so the look survives and the user is not asked to
+     * rebuild it from a blank draft.
+     */
+    fun sanitized(): ConfigDraft {
+        val rings = value.rings.filter { it.category.emitted }
+        if (rings.isNotEmpty()) return copy(value = value.copy(rings = rings))
+
+        val style = value.rings.firstOrNull()?.style ?: RingStyleRecord()
+        // Days, not `entries.first()`: the repair must not silently change when a unit is added.
+        return copy(value = value.copy(rings = listOf(RingConfigRecord(TimeCategory.DAYS, style))))
+    }
 
     /** Marks the look as edited. Identity, target and type are preserved. */
     private fun edited(next: WidgetConfigRecord): ConfigDraft =

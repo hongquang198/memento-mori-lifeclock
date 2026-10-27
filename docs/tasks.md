@@ -350,6 +350,33 @@ not assurances.
   Evidence after the fix: three "Redraw now" taps -> six `render(...)` lines, both widgets every
   time (was one composition per three taps). `ComposedDrawTest` pins the retry contract
   (composed -> not repeated, dropped -> retried and reported, retry hook runs only between attempts).
+- [x] **F6** A widget bound to a config whose only ring was **Free hours** showed "Tap to finish
+  setting this up" forever. Reported as "I add another widget and click draw now but it's still
+  showing Tap to finish setting this up". The draw *did* run
+  (`refresh(configure): drew=true widgets=3`); one log line named the real cause:
+  `state(24): 'Countdown' (COUNTDOWN) cannot be drawn, rings=[NET_FREE_HOURS]`.
+  **Root cause:** a contract hole, not a render bug. Both engines deliberately omit
+  `NET_FREE_HOURS` until ATUS lands, but authoring still offered it and `ConfigDraft` still saved
+  it; only the resolver dropped it. The user's last feedback was a message blaming them for a
+  setup that had nothing left in it.
+  **Rule now:** "offered" and "drawable" are one fact. `TimeCategory.emitted` is the contract
+  (`NET_FREE_HOURS = false`), `WidgetConfigRecord.hasDrawableRing` is the single predicate the
+  editor, the picker and the draft all ask, `ConfigProblem.NO_DRAWABLE_RINGS` refuses a config left
+  with none, `ConfigDraft.sanitized()` repairs one when the editor opens it (keeping the first
+  ring's look), and the picker no longer lists a dead config. The widget state is split so the copy
+  stops lying: `Unsupported` (no profile yet -> "finish setting this up") vs `Undrawable`
+  ("Nothing to draw - tap to pick a config").
+  **Also in this change:** `HOURS` as a first-class category, emitted by both engines (24 per day),
+  with units in `CountdownLabel`/`LifeStatText` - so a countdown can read "1,569 hours" and a life
+  clock the same remainder in hours.
+  Evidence: `state(24): 'Countdown' (COUNTDOWN) has nothing to draw, rings=[NET_FREE_HOURS]` on
+  device, with #22/#23 still drawing normally. Pinned by `ConfigDraftTest` (cannot add a silent
+  category, refuses an all-dead config, sanitising keeps the look), `ConfigPickerTest` (a dead
+  config is never offered and does not re-trigger seeding), `WidgetContentTest` (the new copy),
+  `WidgetSpecResolverTest` ("every category the editor offers can be drawn on both widget types" -
+  the matrix that would have caught this at the widget boundary), `CountdownModelTest` (HOURS: 240 h
+  for 10 days, a partial hour rounds up), `LifeStatsEngineTest` (hours stay inside their day), and
+  `CountdownLabelTest`.
 
 ---
 

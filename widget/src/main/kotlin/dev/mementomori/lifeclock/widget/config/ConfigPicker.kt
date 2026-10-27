@@ -12,6 +12,7 @@ import dev.mementomori.lifeclock.model.Sex
 import dev.mementomori.lifeclock.model.TimeCategory
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
+import dev.mementomori.lifeclock.model.hasDrawableRing
 import dev.mementomori.lifeclock.time.Clock
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -30,8 +31,17 @@ class ConfigPicker(
     private val clock: Clock,
 ) {
 
-    /** Catalog order is stable, so the list the user sees does not reshuffle between visits. */
-    suspend fun catalog(): List<WidgetConfigRecord> = configs.observeAll().first()
+    /**
+     * Catalog order is stable, so the list the user sees does not reshuffle between visits.
+     *
+     * A config with no drawable ring is left out: binding to it would show a message where an arc
+     * should be, and the picker is the only place that can prevent that.
+     */
+    suspend fun catalog(): List<WidgetConfigRecord> =
+        configs.observeAll().first().filter { it.hasDrawableRing }
+
+    /** Every stored config, drawable or not: a dead config is still a catalog, not an empty one. */
+    private suspend fun stored(): List<WidgetConfigRecord> = configs.observeAll().first()
 
     /**
      * A fresh install has nothing to bind to, so the picker would be an empty screen and the first
@@ -48,7 +58,7 @@ class ConfigPicker(
         lifeClockName: String,
         profileName: String,
     ): List<WidgetConfigRecord> {
-        if (catalog().isNotEmpty()) return emptyList()
+        if (stored().isNotEmpty()) return emptyList()
 
         val now = clock.now()
         profiles.save(

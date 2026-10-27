@@ -50,11 +50,18 @@ class WidgetStateLoader(
             zone = dependencies.zone,
         ).resolve(config, snapshot)
         if (spec == null) {
+            // Two different stories with two different fixes: a life clock with no snapshot is
+            // waiting for a person, while anything else resolved to zero rings - which no setting
+            // can finish, so it must not borrow the setup message.
+            if (config.type == WidgetType.LIFE_CLOCK && snapshot == null) {
+                WidgetLog.w("state($glanceId): '${config.name}' has no profile snapshot")
+                return WidgetState.Unsupported
+            }
             WidgetLog.w(
-                "state($glanceId): '${config.name}' (${config.type}) cannot be drawn, " +
+                "state($glanceId): '${config.name}' (${config.type}) has nothing to draw, " +
                     "rings=${config.rings.map { it.category }}",
             )
-            return WidgetState.Unsupported
+            return WidgetState.Undrawable
         }
 
         val rings = rasterizer.rasterize(

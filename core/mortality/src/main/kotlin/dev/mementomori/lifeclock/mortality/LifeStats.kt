@@ -90,6 +90,7 @@ class LifeStatsEngine(private val tables: LifeTableSource) {
         )
 
         val stats = buildMap {
+            put(TimeCategory.HOURS, stat(TimeCategory.HOURS, HOURS_PER_DAY))
             put(TimeCategory.DAYS, stat(TimeCategory.DAYS, 1.0))
             put(TimeCategory.WEEKS, stat(TimeCategory.WEEKS, 1.0 / DAYS_PER_WEEK))
             put(TimeCategory.MONTHS, stat(TimeCategory.MONTHS, 1.0 / DAYS_PER_MONTH))
@@ -124,7 +125,8 @@ class LifeStatsEngine(private val tables: LifeTableSource) {
         /** 365.2425 / 12. */
         const val DAYS_PER_MONTH = 30.436875
         const val DAYS_PER_SEASON = DAYS_PER_YEAR / 4
-        const val MINUTES_PER_DAY = 24 * 60.0
+        const val HOURS_PER_DAY = 24.0
+        const val MINUTES_PER_DAY = HOURS_PER_DAY * 60
 
         /**
          * Resting heart rate, beats per minute. The AHA publishes a *range* (60-100), not a point,

@@ -17,10 +17,10 @@ object CountdownLabel {
     fun of(count: Long, category: TimeCategory, locale: Locale = Locale.getDefault()): String {
         val units = count.coerceAtLeast(0)
         val unit = when (category) {
+            TimeCategory.HOURS, TimeCategory.NET_FREE_HOURS -> "hour"
             TimeCategory.DAYS -> "day"
             TimeCategory.WEEKS -> "week"
             TimeCategory.MONTHS -> "month"
-            TimeCategory.NET_FREE_HOURS -> "hour"
         }
         val suffix = if (units == 1L) unit else "${unit}s"
         return "${NumberFormat.getIntegerInstance(locale).format(units)} $suffix"

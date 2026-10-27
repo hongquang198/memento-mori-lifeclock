@@ -1,6 +1,7 @@
 package dev.mementomori.lifeclock.model.editor
 
 import dev.mementomori.lifeclock.model.RingConfigRecord
+import dev.mementomori.lifeclock.model.RingStyleRecord
 import dev.mementomori.lifeclock.model.RingTemplate
 import dev.mementomori.lifeclock.model.TimeCategory
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
@@ -125,5 +126,32 @@ class ConfigDraftTest : StringSpec({
         draft().named("  ").validate().shouldContain(ConfigProblem.NAME_BLANK)
         draft().withCategory(TimeCategory.DAYS, enabled = false).validate()
             .shouldContain(ConfigProblem.NO_RINGS)
+    }
+
+    "a category no engine emits cannot be added" {
+        val before = draft()
+
+        before.withCategory(TimeCategory.NET_FREE_HOURS, enabled = true) shouldBe before
+    }
+
+    "a config whose every ring is undrawable is refused" {
+        val dead = ConfigDraft(
+            draft().value.copy(rings = listOf(RingConfigRecord(TimeCategory.NET_FREE_HOURS))),
+        )
+
+        dead.validate() shouldContain ConfigProblem.NO_DRAWABLE_RINGS
+    }
+
+    "sanitising swaps an undrawable ring for a drawable one and keeps its look" {
+        val style = RingStyleRecord(diameterDp = 200)
+        val dead = ConfigDraft(
+            draft().value.copy(rings = listOf(RingConfigRecord(TimeCategory.NET_FREE_HOURS, style))),
+        )
+
+        val repaired = dead.sanitized()
+
+        repaired.value.rings.single().category shouldBe TimeCategory.DAYS
+        repaired.value.rings.single().style shouldBe style
+        repaired.isValid() shouldBe true
     }
 })

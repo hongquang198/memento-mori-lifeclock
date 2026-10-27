@@ -236,7 +236,26 @@ class CountdownModelTest : FunSpec({
         test("without a policy the slice is absent, not zero") {
             val slices = MODEL.slices(CountdownTarget(START, END), START, UTC)
             slices.map { it.category } shouldBe
-                listOf(TimeCategory.DAYS, TimeCategory.WEEKS, TimeCategory.MONTHS)
+                listOf(TimeCategory.HOURS, TimeCategory.DAYS, TimeCategory.WEEKS, TimeCategory.MONTHS)
+        }
+    }
+
+    context("HOURS") {
+
+        test("at the start: every hour of the span, and the same full arc") {
+            val s = slice(TimeCategory.HOURS, START)!!
+            s.total shouldBe 240L
+            s.remaining shouldBe 240L
+            s.fractionRemaining shouldBe 1.0
+        }
+
+        test("halfway: half the hours, half-full arc") {
+            slice(TimeCategory.HOURS, START.plus(Duration.ofDays(5)))!!.remaining shouldBe 120L
+        }
+
+        test("a partial hour rounds up, so the last hour never reads as zero") {
+            // 1 h 30 min left is 2 hours - the same rule that turns a few hours into "1 day".
+            slice(TimeCategory.HOURS, END.minus(Duration.ofMinutes(90)))!!.remaining shouldBe 2L
         }
     }
 

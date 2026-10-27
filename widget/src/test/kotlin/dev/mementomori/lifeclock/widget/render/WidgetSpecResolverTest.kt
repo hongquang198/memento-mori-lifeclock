@@ -15,6 +15,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -150,6 +151,21 @@ class WidgetSpecResolverTest {
         // NET_FREE_HOURS needs a policy; with none the model emits no slice for it.
         val spec = resolver.resolve(config(rings = listOf(RingConfigRecord(TimeCategory.NET_FREE_HOURS))))
         assertNull(spec)
+    }
+
+    @Test
+    fun `every category the editor offers can be drawn on both widget types`() {
+        // The defect this pins: a category offered by authoring but emitted by no engine saved
+        // fine, resolved to zero rings, and showed "finish setting this up" on a finished widget.
+        TimeCategory.entries.filter { it.emitted }.forEach { category ->
+            val rings = listOf(RingConfigRecord(category))
+
+            assertNotNull("$category must draw on a countdown", resolver.resolve(config(rings = rings)))
+            assertNotNull(
+                "$category must draw on a life clock",
+                resolver.resolve(config(type = WidgetType.LIFE_CLOCK, rings = rings), snapshot()),
+            )
+        }
     }
 }
 

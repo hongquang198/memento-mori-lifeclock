@@ -55,3 +55,13 @@ data class WidgetInstanceBinding(
     val glanceId: String,
     val configId: String,
 )
+
+/**
+ * Whether a widget can draw this config at all: one ring whose category an engine emits.
+ *
+ * Authoring, binding and rendering all ask this one question, so they cannot disagree. Their
+ * disagreement is what produced a config that saved fine, rendered as an empty spec, and blamed
+ * the user for not finishing a setup that had nothing left in it.
+ */
+val WidgetConfigRecord.hasDrawableRing: Boolean
+    get() = rings.any { it.category.emitted }

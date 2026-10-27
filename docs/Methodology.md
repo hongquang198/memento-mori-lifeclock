@@ -61,7 +61,12 @@ It is not a prediction for an individual, and the UI must not imply one.
 ## 4. What is deliberately not computed
 
 - **Net free hours** needs the ATUS time-use split. It lands with that source and its reconciliation
-  test, not before; `TimeCategory.NET_FREE_HOURS` exists but the engine does not emit it yet.
+  test, not before; `TimeCategory.NET_FREE_HOURS` exists but the engine does not emit it yet - and
+  because authoring offers only emitted categories (`TimeCategory.emitted`), no config can be saved
+  that would render as an empty spec.
+- **Hours** are emitted: a life clock divides the same remainder by 24, a countdown counts the span
+  in hours. Both round up from the one `daysLeft`/`remainingSpan`, so an hours arc can never disagree
+  with the days arc beside it.
 - **Books read** has no source that survives scrutiny (average book length and reading speed are
   both contested), so it is not shown rather than shown with false precision.
 

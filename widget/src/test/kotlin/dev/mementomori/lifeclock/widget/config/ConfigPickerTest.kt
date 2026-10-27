@@ -2,6 +2,8 @@ package dev.mementomori.lifeclock.widget.config
 
 import dev.mementomori.lifeclock.data.InMemoryLifeClockStore
 import dev.mementomori.lifeclock.model.RefreshIntent
+import dev.mementomori.lifeclock.model.RingConfigRecord
+import dev.mementomori.lifeclock.model.TimeCategory
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
 import kotlinx.coroutines.flow.first
@@ -36,6 +38,7 @@ class ConfigPickerTest {
         startEpochMillis = 0,
         endEpochMillis = 1,
         granularity = RefreshIntent.DAILY,
+        rings = listOf(RingConfigRecord(TimeCategory.DAYS)),
     ).also { store.configs.save(it) }
 
     private suspend fun seed() = picker.seedIfEmpty("First year", "Life clock", "Sample person")
@@ -108,5 +111,23 @@ class ConfigPickerTest {
 
         assertEquals(1, store.bindings.observeAllBindings().first().size)
         assertEquals("two", store.bindings.observeBinding("17").first()?.configId)
+    }
+
+    @Test
+    fun `a config nothing can draw is never offered`() = runBlocking {
+        store.configs.save(
+            WidgetConfigRecord(
+                configId = "dead",
+                name = "dead",
+                type = WidgetType.COUNTDOWN,
+                startEpochMillis = 0,
+                endEpochMillis = 1,
+                rings = listOf(RingConfigRecord(TimeCategory.NET_FREE_HOURS)),
+            ),
+        )
+
+        assertTrue(picker.catalog().isEmpty())
+        // A dead config still counts as a catalog: seeding must not paper over it with samples.
+        assertTrue(seed().isEmpty())
     }
 }

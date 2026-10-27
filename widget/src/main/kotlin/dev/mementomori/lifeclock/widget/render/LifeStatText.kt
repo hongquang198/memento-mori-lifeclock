@@ -19,10 +19,10 @@ object LifeStatText {
 
     private fun unit(category: TimeCategory, count: Long): String {
         val (singular, plural) = when (category) {
+            TimeCategory.HOURS, TimeCategory.NET_FREE_HOURS -> "hour" to "hours"
             TimeCategory.DAYS -> "day" to "days"
             TimeCategory.WEEKS -> "week" to "weeks"
             TimeCategory.MONTHS -> "month" to "months"
-            TimeCategory.NET_FREE_HOURS -> "hour" to "hours"
         }
         return if (count == 1L) singular else plural
     }

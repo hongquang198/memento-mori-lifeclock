@@ -42,6 +42,7 @@ fun WidgetContent(state: WidgetState, modifier: GlanceModifier = GlanceModifier)
         when (state) {
             WidgetState.Unconfigured -> Message(WidgetCopy.UNCONFIGURED)
             WidgetState.Unsupported -> Message(WidgetCopy.UNSUPPORTED)
+            WidgetState.Undrawable -> Message(WidgetCopy.UNDRAWABLE)
             is WidgetState.Ready -> ReadyContent(state)
         }
     }
@@ -134,6 +135,9 @@ private fun Message(text: String) {
 internal object WidgetCopy {
     const val UNCONFIGURED = "Tap to choose what to show"
     const val UNSUPPORTED = "Tap to finish setting this up"
+
+    /** Not "finish setting this up": the config has no ring that any engine can draw. */
+    const val UNDRAWABLE = "Nothing to draw - tap to pick a config"
 }
 
 

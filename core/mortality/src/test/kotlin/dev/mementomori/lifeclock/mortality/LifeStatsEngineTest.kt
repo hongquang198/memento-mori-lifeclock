@@ -38,6 +38,16 @@ class LifeStatsEngineTest : StringSpec({
         stats.getValue(TimeCategory.MONTHS).remaining shouldBe 473L
     }
 
+    "hours are the same remainder in a smaller unit" {
+        val stats = engine.compute(profile(), now, ZoneId.of("UTC"))!!.stats
+        val days = stats.getValue(TimeCategory.DAYS).remaining
+        val hours = stats.getValue(TimeCategory.HOURS).remaining
+
+        // Both round up from one daysLeft, so the hours stay inside the day they came from -
+        // a second computation would be free to drift by a whole day.
+        (hours > (days - 1) * 24 && hours <= days * 24) shouldBe true
+    }
+
     "every arc reports the same fraction, so the rings cannot disagree" {
         val stats = engine.compute(profile(), now, ZoneId.of("UTC"))!!.stats
         val fractions = stats.values.map { it.fractionRemaining }.distinct()

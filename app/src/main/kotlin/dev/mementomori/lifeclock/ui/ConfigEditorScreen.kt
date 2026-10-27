@@ -67,7 +67,7 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun ConfigEditorScreen(viewModel: MainViewModel, initial: WidgetConfigRecord, onDone: () -> Unit) {
-    var draft by remember(initial.configId) { mutableStateOf(ConfigDraft(initial)) }
+    var draft by remember(initial.configId) { mutableStateOf(ConfigDraft(initial).sanitized()) }
     val config = draft.value
     val profiles by viewModel.profiles.collectAsState()
     val configs by viewModel.configs.collectAsState()
@@ -342,7 +342,8 @@ private fun RingEditor(
 
 @Composable
 private fun AddRingRow(used: Set<TimeCategory>, onAdd: (TimeCategory) -> Unit) {
-    val available = TimeCategory.entries.filterNot { it in used }
+    // Only categories an engine emits: offering the rest authors a config nothing can draw.
+    val available = TimeCategory.entries.filter { it.emitted }.filterNot { it in used }
     if (available.isEmpty()) return
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -408,6 +409,7 @@ private fun String.toColor(scheme: androidx.compose.material3.ColorScheme): Colo
 }
 
 private fun TimeCategory.label(): String = when (this) {
+    TimeCategory.HOURS -> "Hours"
     TimeCategory.DAYS -> "Days"
     TimeCategory.WEEKS -> "Weeks"
     TimeCategory.MONTHS -> "Months"
@@ -417,6 +419,7 @@ private fun TimeCategory.label(): String = when (this) {
 private fun ConfigProblem.label(): String = when (this) {
     ConfigProblem.NAME_BLANK -> "name is empty"
     ConfigProblem.NO_RINGS -> "add at least one ring"
+    ConfigProblem.NO_DRAWABLE_RINGS -> "no ring here can be drawn yet - pick another"
     ConfigProblem.MISSING_DEADLINE -> "pick a deadline"
     ConfigProblem.DEADLINE_NOT_AFTER_START -> "the start must be before the deadline"
     ConfigProblem.MISSING_PROFILE -> "pick a person"

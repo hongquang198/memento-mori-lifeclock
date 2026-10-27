@@ -11,8 +11,14 @@ sealed interface WidgetState {
     /** No config is bound to this placed widget, or the bound config no longer exists. */
     data object Unconfigured : WidgetState
 
-    /** A config exists but cannot be drawn yet: no profile, unknown country, or no usable rings. */
+    /** A config exists but cannot be drawn yet: no profile, or a country the table does not cover. */
     data object Unsupported : WidgetState
+
+    /**
+     * A config exists and no setting could make it draw: every ring asks for a category no engine
+     * emits. Kept apart from [Unsupported] because "finish setting this up" is a lie here.
+     */
+    data object Undrawable : WidgetState
 
     data class Ready(
         val rings: List<RenderedRing>,

@@ -99,5 +99,13 @@ class WidgetContentTest {
 
         onNode(hasText(WidgetCopy.UNSUPPORTED)).assertExists()
     }
+
+    @Test
+    fun `a config with nothing drawable asks for another config, not for setup`() =
+        runGlanceAppWidgetUnitTest {
+            provideComposable { WidgetContent(WidgetState.Undrawable) }
+
+            onNode(hasText(WidgetCopy.UNDRAWABLE)).assertExists()
+        }
 }
 

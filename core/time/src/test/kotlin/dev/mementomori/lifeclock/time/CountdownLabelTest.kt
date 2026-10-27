@@ -19,12 +19,14 @@ class CountdownLabelTest : StringSpec({
         CountdownLabel.of(1, TimeCategory.DAYS, Locale.US) shouldBe "1 day"
         CountdownLabel.of(1, TimeCategory.WEEKS, Locale.US) shouldBe "1 week"
         CountdownLabel.of(1, TimeCategory.MONTHS, Locale.US) shouldBe "1 month"
+        CountdownLabel.of(1, TimeCategory.HOURS, Locale.US) shouldBe "1 hour"
         CountdownLabel.of(1, TimeCategory.NET_FREE_HOURS, Locale.US) shouldBe "1 hour"
     }
 
     "each category keeps its own unit" {
         CountdownLabel.of(10, TimeCategory.WEEKS, Locale.US) shouldBe "10 weeks"
         CountdownLabel.of(3, TimeCategory.MONTHS, Locale.US) shouldBe "3 months"
+        CountdownLabel.of(1569, TimeCategory.HOURS, Locale.US) shouldBe "1,569 hours"
         CountdownLabel.of(1569, TimeCategory.NET_FREE_HOURS, Locale.US) shouldBe "1,569 hours"
     }
 

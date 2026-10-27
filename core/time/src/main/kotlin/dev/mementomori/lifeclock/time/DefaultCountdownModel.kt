@@ -9,10 +9,10 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /**
- * The four slice categories.
+ * The slice categories.
  *
  * Shared rules: clamp `now` into the target, round display counts **up**, compute the fraction
- * once from the exact instants. Only the unit differs — days/weeks are elapsed (zone-free),
+ * once from the exact instants. Only the unit differs — hours/days/weeks are elapsed (zone-free),
  * months are calendar (needs `zone`), net-free hours subtract sleep and maintenance.
  */
 class DefaultCountdownModel(
@@ -39,6 +39,7 @@ class DefaultCountdownModel(
         val effectiveNow = target.end.minus(remainingSpan)
 
         return buildList {
+            add(unitSlice(TimeCategory.HOURS, ONE_HOUR, remainingSpan, totalSpan, fraction))
             add(unitSlice(TimeCategory.DAYS, ONE_DAY, remainingSpan, totalSpan, fraction))
             add(unitSlice(TimeCategory.WEEKS, ONE_WEEK, remainingSpan, totalSpan, fraction))
             add(
@@ -149,6 +150,7 @@ class DefaultCountdownModel(
     }
 
     private companion object {
+        val ONE_HOUR: Duration = Duration.ofHours(1)
         val ONE_DAY: Duration = Duration.ofDays(1)
         val ONE_WEEK: Duration = Duration.ofDays(7)
 
