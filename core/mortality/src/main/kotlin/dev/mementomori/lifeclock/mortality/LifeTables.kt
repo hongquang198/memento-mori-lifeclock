@@ -23,6 +23,9 @@ data class Citation(
 interface LifeTableSource {
     val citation: Citation
 
+    /** Every country the table covers, ISO 3166-1 alpha-3, sorted. Drives the editor's picker. */
+    val countries: List<String>
+
     /** Null when this (country, sex, age) is not in the table - never a guessed number. */
     fun lifeExpectancy(countryIso3: String, sex: Sex, age: Int): Double?
 }
@@ -41,6 +44,8 @@ class CsvLifeTableSource private constructor(
 ) : LifeTableSource {
 
     private data class Key(val countryIso3: String, val sex: Sex, val age: Int)
+
+    override val countries: List<String> = rows.keys.map { it.countryIso3 }.distinct().sorted()
 
     override fun lifeExpectancy(countryIso3: String, sex: Sex, age: Int): Double? {
         rows[Key(countryIso3, sex, age)]?.let { return it }

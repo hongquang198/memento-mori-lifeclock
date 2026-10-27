@@ -6,6 +6,11 @@ import java.time.temporal.ChronoUnit
 
 /** Everything that can be wrong with a profile, named so the editor can point at the field. */
 enum class ProfileProblem {
+    // Editor-only: the value is implausible for a person, or not a person at all.
+    NAME_BLANK,
+    UNKNOWN_COUNTRY,
+
+    // Value rules, shared with anything that loads a stored profile.
     FUTURE_BIRTH,
     IMPLAUSIBLE_AGE,
     SLEEP_OUT_OF_RANGE,

@@ -52,6 +52,9 @@ data class LifeSnapshot(
  */
 class LifeStatsEngine(private val tables: LifeTableSource) {
 
+    /** Countries the table can answer for, for the profile editor's picker. */
+    val countries: List<String> get() = tables.countries
+
     /**
      * Null means "cannot answer honestly" (future birth, unknown country, age past the table).
      * Callers must show a setup state, never a zero: a zeroed arc reads as "you are dead".

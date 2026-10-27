@@ -190,24 +190,60 @@ widget" (T4.16) — a common place for widgets to drift from their preview.
   renderer, and each ring keeps its own style/colour.
 - [x] **T4.4** Impl: `LayoutPlan` (pure) + the four arrangements in `WidgetContent`; `WidgetState.Ready`
   carries the config's layout.
-- [ ] **T4.5** Tests: label placement `INSIDE` (`Box` overlay) vs `UNDER` (`Column`); `NONE` renders no text.
-- [ ] **T4.6** Impl: label widget tree per placement (text **not** baked into bitmap).
-- [ ] **T4.7** Tests (Compose UI): editing diameter/color/stroke/label updates the **live preview** and persists.
-- [ ] **T4.8** Impl: editor controls (diameter slider, color picker, stroke slider, label field, placement, layout, template picker) + live preview.
-- [ ] **T4.9** Tests: `strokeRatio` bounds (0.05..0.5) and diameter bounds clamp in UI and engine.
+- [x] **T4.5** Tests: label placement `INSIDE` (`Box` overlay) vs `UNDER` (`Column`); `NONE` renders no text.
+  Pinned in `WidgetContentTest` ("a label placed inside the ring is still text, not pixels",
+  "no label means no text node").
+- [x] **T4.6** Impl: label widget tree per placement (text **not** baked into bitmap).
+- [x] **T4.7** Tests: editing diameter/color/stroke/label updates the **live preview** and persists.
+  **Deviation:** the behaviour is pinned at the draft layer (`ConfigDraftTest`) plus the device run
+  below; there is no Compose UI test. A Compose test would need a fake dependency graph and would
+  re-assert the same draft rules the unit tests already own.
+- [x] **T4.8** Impl: editor controls (diameter slider, color picker, stroke slider, label field, placement, layout, template picker) + live preview.
+- [x] **T4.9** Tests: `strokeRatio` bounds (0.05..0.5) and diameter bounds clamp in UI and engine.
+  `ConfigDraft.withStyle` clamps every edit, so a stored out-of-range config is repaired on load;
+  the sliders share `ConfigDraft.MIN_*`/`MAX_*` so the UI cannot offer an illegal value.
 
 ### Widget catalog & instance manager (feature D)
-- [ ] **T4.10** Tests (Compose UI): catalog screen creates/renames/duplicates/deletes configs.
-- [ ] **T4.11** Impl: catalog screen (list of `WidgetConfigRecord`) + "New config" entry point.
-- [ ] **T4.12** Tests: "Your widgets" lists placed instances; rebind changes the rendered config; delete guards a bound config.
-- [ ] **T4.13** Impl: "Your widgets" manager screen (list/rebind/duplicate/unbind) calling `GlanceAppWidget.update()` per affected `glanceId`.
+- [x] **T4.10** Tests (Compose UI): catalog screen creates/renames/duplicates/deletes configs.
+  **Deviation:** covered by the delete-guard repository tests (`:core:data`) and the device run;
+  renaming lives in the editor's single name field instead of an inline dialog.
+- [x] **T4.11** Impl: catalog screen (list of `WidgetConfigRecord`) + "New config" entry point.
+- [x] **T4.12** Tests: "Your widgets" lists placed instances; rebind changes the rendered config; delete guards a bound config.
+- [x] **T4.13** Impl: "Your widgets" manager screen (list/rebind/duplicate/unbind).
+  **Deviation:** rebind reuses `ConfigActivity` (the same picker the launcher opens) instead of a
+  second in-app chooser - one binding path, not two. Redraws go through
+  `WidgetRefreshScheduler.refreshNow(force = true)`, which already owns the gate; calling
+  `GlanceAppWidget.update()` per id would bypass `ProcessRefreshGate`.
 
 ### Polish
-- [ ] **T4.14** Impl: dynamic color / `ColorProvider` theming; verify `theme:` color roles render.
-- [ ] **T4.15** Impl: a11y — content descriptions, large-font survival.
+- [x] **T4.14** Impl: dynamic color / `ColorProvider` theming; verify `theme:` color roles render.
+  Widget side: `ResourceThemePalette` resolves `theme:*` (tested) and the editor offers those roles
+  as swatches. The app shell stays on the default M3 scheme: two theme sources would need one owner.
+- [ ] **T4.15** Impl: a11y - content descriptions, large-font survival. Descriptions are done and
+  tested (`contentDescription` falls back to a generic label); large-font survival is unverified.
 - [ ] **T4.16** Impl: per-size widget previews (Android 12+ `previewLayout` + static fallback); verify preview matches placed widget.
-- [ ] **T4.17** Manual: launcher matrix (Pixel Launcher, Samsung One UI, Nova, Lawnchair) — screenshot each template.
+  The *parity* half is done by construction (shared `RingRasterizer`); `previewLayout` is not shipped.
+- [ ] **T4.17** Manual: launcher matrix (Pixel Launcher, Samsung One UI, Nova, Lawnchair) - screenshot each template.
+  Only Pixel Launcher on a Pixel 8a (2x2 cell) is verified.
 - **DoD:** every template renders correctly on all four launchers; editor preview matches the placed widget.
+
+### M4 findings (device: Pixel 8a, Android 16, `Asia/Ho_Chi_Minh`)
+- **Editor -> store -> redraw, measured.** Switching the placed life clock to the `bold` template and
+  saving produced `render(16): fraction=0.5112660700750072 bitmap=326x326 cell=140dp
+  label="14,068 days"` and a visibly thicker arc on the launcher. The write path is: draft ->
+  `ConfigRepository.save` -> `refreshNow(force = true)` -> worker -> `WidgetStateLoader`.
+- **Preview parity is structural, not asserted.** `RingRasterizer` is the single place a style record
+  becomes pixels, and both `WidgetStateLoader` and the Compose `RingPreview` call it. The preview
+  differs from the placed widget in exactly one input: `cellWidthDp` is null, because an editor pane
+  is not a launcher cell.
+- **The diameter cap is visible in the editor.** A 160 dp config renders 124 dp in a 140 dp cell
+  (`cell - 16dp`), so the preview is larger than the launcher. That is deliberate: the cap is a draw
+  decision, never a rewrite of the user's config.
+- **Country names are derived, not stored.** The table is keyed by ISO-3 because that is what the UN
+  publishes; `CountryNames` maps alpha-3 -> name through the platform's ISO tables and falls back to
+  the code, so there is no second list to drift from the table.
+- **Nested-Scaffold trap avoided.** One `Scaffold` in `MementoApp` owns the top bar, snackbar and
+  insets; screens are plain content. Four destinations did not justify a navigation dependency.
 
 ---
 

@@ -13,6 +13,7 @@ import dev.mementomori.lifeclock.widget.ring.CachedRingRenderer
 import dev.mementomori.lifeclock.widget.refresh.UnbindWidgetsWorker
 import dev.mementomori.lifeclock.widget.content.WidgetContent
 import dev.mementomori.lifeclock.widget.refresh.WidgetRefreshScheduler
+import dev.mementomori.lifeclock.widget.render.RingRasterizer
 import dev.mementomori.lifeclock.widget.render.WidgetStateLoader
 import dev.mementomori.lifeclock.widget.render.appWidgetWidthDp
 import dev.mementomori.lifeclock.widget.config.configureIntent
@@ -29,8 +30,11 @@ class CountdownWidget : GlanceAppWidget() {
         val dependencies = WidgetDependenciesHolder.current
             ?: error("WidgetDependenciesHolder.current must be set in Application.onCreate")
         val appWidgetId = (id as? AppWidgetId)?.appWidgetId
-        val state = WidgetStateLoader(dependencies, processRingRenderer, context)
-            .load(id.bindingKey(), appWidgetId?.let { appWidgetWidthDp(context, it) })
+        val state = WidgetStateLoader(
+            dependencies,
+            RingRasterizer.create(context, processRingRenderer),
+            context,
+        ).load(id.bindingKey(), appWidgetId?.let { appWidgetWidthDp(context, it) })
 
         // Tapping the widget must reach the picker. The launcher's own "reconfigure" affordance is
         // not dependable (measured on a Pixel 8a: an unbound widget only offers "Remove"), so the
@@ -57,8 +61,11 @@ private val processRingRenderer = CachedRingRenderer()
  * The binding repository stores strings, so the config Activity must use this same function or
  * widget and settings would disagree about which instance they mean.
  */
+/** The key a placed instance is stored under, from its platform id. One definition, two callers. */
+fun appWidgetBindingKey(appWidgetId: Int): String = appWidgetId.toString()
+
 fun GlanceId.bindingKey(): String = when (this) {
-    is AppWidgetId -> appWidgetId.toString()
+    is AppWidgetId -> appWidgetBindingKey(appWidgetId)
     else -> toString()
 }
 

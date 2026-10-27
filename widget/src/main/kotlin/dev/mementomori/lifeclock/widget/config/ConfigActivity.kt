@@ -30,7 +30,7 @@ import dev.mementomori.lifeclock.widget.bindingKey
  * Used twice: the launcher sends it at placement (`android:configure`), and the widget sends it on
  * tap. Same shape both ways, so both routes land on the same code path.
  */
-internal fun configureIntent(context: Context, appWidgetId: Int): Intent =
+fun configureIntent(context: Context, appWidgetId: Int): Intent =
     Intent(context, ConfigActivity::class.java)
         .setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
         .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)

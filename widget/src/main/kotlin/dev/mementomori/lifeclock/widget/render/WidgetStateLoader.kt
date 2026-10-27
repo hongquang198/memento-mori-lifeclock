@@ -9,14 +9,10 @@ import android.widget.RemoteViews
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
 import dev.mementomori.lifeclock.mortality.LifeSnapshot
-import dev.mementomori.lifeclock.widget.ring.RingRenderer
-import dev.mementomori.lifeclock.widget.ring.RingStyleResolver
-import dev.mementomori.lifeclock.widget.ring.ThemePalette
-import kotlinx.coroutines.flow.first
-import kotlin.math.roundToInt
-import dev.mementomori.lifeclock.widget.content.ChronometerViews
 import dev.mementomori.lifeclock.widget.WidgetDependencies
 import dev.mementomori.lifeclock.widget.WidgetLog
+import dev.mementomori.lifeclock.widget.content.ChronometerViews
+import kotlinx.coroutines.flow.first
 
 /**
  * Reads the bound config and turns it into a [WidgetState].
@@ -26,7 +22,7 @@ import dev.mementomori.lifeclock.widget.WidgetLog
  */
 class WidgetStateLoader(
     private val dependencies: WidgetDependencies,
-    private val renderer: RingRenderer,
+    private val rasterizer: RingRasterizer,
     private val context: Context,
 ) {
     suspend fun load(glanceId: String, cellWidthDp: Int? = null): WidgetState {
@@ -44,40 +40,14 @@ class WidgetStateLoader(
             zone = dependencies.zone,
         ).resolve(config, snapshot) ?: return WidgetState.Unsupported
 
-        val density = context.resources.displayMetrics.density
-        val styleResolver = RingStyleResolver(
-            density = density,
-            palette = ResourceThemePalette(context),
-            fallbackArgb = context.getColor(R.color.widget_fallback),
-        )
-        val genericDescription = context.getString(R.string.ring_content_description)
-
-        val rings = spec.rings.map { ring ->
-            val style = styleResolver.resolve(ring.config.style)
-            val diameterDp = fitDiameterDp(ring.config.style.diameterDp, cellWidthDp)
-            val fitted = style.copy(diameterPx = (diameterDp * density).roundToInt())
-            val bitmap = renderer.render(fitted, ring.fraction)
-
+        val rings = rasterizer.rasterize(
+            rings = spec.rings,
+            cellWidthDp = cellWidthDp,
             // A life clock's point is the number, so the ring's own count replaces the static label.
             // A countdown keeps its authored label; its number ticks in the Chronometer below.
-            val label = snapshot?.stats?.get(ring.config.category)
-                ?.let(LifeStatText::of)
-                ?: style.label
-
-            // The one line that answers "what did it actually draw" without a debugger attached.
-            WidgetLog.i(
-                "render($glanceId): fraction=${ring.fraction} " +
-                    "bitmap=${bitmap.width}x${bitmap.height} cell=${cellWidthDp ?: "?"}dp " +
-                    "label=\"$label\"",
-            )
-            RenderedRing(
-                bitmap = bitmap,
-                sizeDp = diameterDp,
-                label = label,
-                labelPlacement = style.labelPlacement,
-                contentDescription = label.ifBlank { genericDescription },
-            )
-        }
+            labelFor = { ring -> snapshot?.stats?.get(ring.category)?.let(LifeStatText::of) },
+            onRendered = { line -> WidgetLog.i("render($glanceId): $line") },
+        )
 
         return WidgetState.Ready(
             rings = rings,

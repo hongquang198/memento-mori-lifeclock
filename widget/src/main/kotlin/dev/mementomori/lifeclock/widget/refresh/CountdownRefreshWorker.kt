@@ -80,6 +80,6 @@ internal suspend fun updatePlacedWidgets(
 }
 
 /** The platform's list of placed instances. Split out so it can be asserted without composing. */
-internal fun placedWidgetIds(context: Context): IntArray =
+fun placedWidgetIds(context: Context): IntArray =
     AppWidgetManager.getInstance(context)
         .getAppWidgetIds(ComponentName(context, CountdownWidgetReceiver::class.java))

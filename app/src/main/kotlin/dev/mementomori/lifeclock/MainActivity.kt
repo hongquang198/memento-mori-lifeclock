@@ -1,80 +1,47 @@
 package dev.mementomori.lifeclock
 
 import android.os.Bundle
-import android.os.SystemClock
-import android.widget.Chronometer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import dagger.hilt.android.AndroidEntryPoint
-import dev.mementomori.lifeclock.widget.ring.CanvasRingRenderer
-import dev.mementomori.lifeclock.widget.ring.RingStyle
+import dev.mementomori.lifeclock.ui.MainViewModel
+import dev.mementomori.lifeclock.ui.MementoApp
 
 /**
- * A preview of the two mechanisms the widget is built on: a ring drawn as a real bitmap, and a
- * `Chronometer` counting down on its own.
+ * The app's entry point.
  *
- * The real settings UI arrives with the config Activity (T2.15); until then this screen is how
- * the drawing is checked without placing a widget.
+ * It owns no state: [MainViewModel] reads the same graph the widget uses, so a config saved here is
+ * the config the next draw reads. The widget itself is redrawn through its worker, never from here.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val ring = CanvasRingRenderer()
-            .render(
-                RingStyle(
-                    diameterPx = 240,
-                    strokeRatio = 0.12,
-                    color = 0xFFE5484D.toInt(),
-                    trackColor = 0xFF2A2A2E.toInt(),
-                ),
-                fraction = 0.73,
-            )
-            .asImageBitmap()
-
+        // Target 35 draws behind the system bars by default; this opts in explicitly and lets
+        // Scaffold own the insets instead of leaving a white band under a light status bar.
+        // The app is light-only for now, so the icons must stay dark even in system dark mode.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+        )
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
-                    ) {
-                        Text("Ring preview — 73%")
-
-                        Image(
-                            bitmap = ring,
-                            contentDescription = "progress ring at 73%",
-                            modifier = Modifier.size(240.dp),
-                        )
-
-                        AndroidView(factory = { context ->
-                            Chronometer(context).apply {
-                                isCountDown = true
-                                base = SystemClock.elapsedRealtime() + 7L * 24 * 60 * 60 * 1000
-                                textSize = 22f
-                                start()
-                            }
-                        })
-                    }
+                    MementoApp(viewModel)
                 }
             }
         }
     }
 }
+
+
