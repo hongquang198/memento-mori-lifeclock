@@ -22,21 +22,30 @@ enum class ConfigProblem {
  * A config being edited.
  *
  * Every setter is a pure transformation, so the editor's behaviour is testable without Compose -
- * the same split the picker uses. One rule runs through all of them: **editing any knob makes the
- * config [RingTemplate.CUSTOM]**. A preset describes an untouched look; once the user moves a
- * slider, calling it "Classic" would be a lie.
+ * the same split the picker uses. One rule runs through the **look** knobs: editing any of them
+ * makes the config [RingTemplate.CUSTOM]. A preset describes an untouched look; once the user
+ * moves a slider, calling it "Classic" would be a lie. Schedule and identity knobs (name, type,
+ * start, deadline, person) are not the look and leave the preset intact.
  */
 data class ConfigDraft(val value: WidgetConfigRecord) {
 
     fun named(name: String): ConfigDraft = copy(value = value.copy(name = name))
 
-    fun withType(type: WidgetType): ConfigDraft = edited(value.copy(type = type))
+    fun withType(type: WidgetType): ConfigDraft = copy(value = value.copy(type = type))
+
+    /**
+     * The reference the arc's `total` is measured from: "this countdown started on the 1st".
+     *
+     * Like the deadline, this is schedule, not appearance, so it leaves the preset alone - and it
+     * must stay before the deadline, or the arc has no positive span to be a fraction of.
+     */
+    fun withStart(startEpochMillis: Long): ConfigDraft =
+        copy(value = value.copy(startEpochMillis = startEpochMillis))
 
     fun withDeadline(endEpochMillis: Long?): ConfigDraft =
-        edited(value.copy(endEpochMillis = endEpochMillis))
+        copy(value = value.copy(endEpochMillis = endEpochMillis))
 
-    fun withProfile(profileId: String?): ConfigDraft =
-        edited(value.copy(profileRef = profileId))
+    fun withProfile(profileId: String?): ConfigDraft = copy(value = value.copy(profileRef = profileId))
 
     /** Choosing a preset is the one edit that is *not* custom: it replaces the look wholesale. */
     fun withTemplate(template: RingTemplate): ConfigDraft =

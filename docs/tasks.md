@@ -300,6 +300,21 @@ not assurances.
   over", "the readout uses the primary ring's own count") + `WidgetContentTest` (readout node).
   Preview parity: `RingPreview` draws the same readout, standing in for the Chronometer with
   `clockText()` below a day.
+- [x] **F2** The countdown's start is now editable, **countdown only**: a life clock's start is the
+  person's birth date and belongs to the profile, so a second knob here would be a conflicting
+  birth date. `StartRow` (start of the chosen day, mirroring the deadline's end of day) +
+  `ConfigDraft.withStart`. `DEADLINE_NOT_AFTER_START` still guards the span and its message now
+  says what is wrong ("the start must be before the deadline", not "the deadline is in the past").
+  **Also fixed:** schedule and identity edits (start, deadline, type, person) no longer mark the
+  look `CUSTOM` - picking a date used to turn "classic" into "custom" with no visual change.
+  Evidence: editor `Starts: 2026-10-01` -> arcs at ~71%, template still `classic` -> save ->
+  `render(22): fraction=0.7102523968578668 bitmap=255x255 cell=140dp`.
+- [ ] **F3** GRID/STACK clip on the launcher: `fitDiameterDp` caps a ring against the **whole cell**
+  (`cellWidthDp - 16`), not against its slot, so two 97 dp rings in a 140 dp cell overflow and the
+  second ring is cut at the widget edge (seen on Pixel 8a, 2x2 cell, `grid`, 2 rings).
+  Proposed: divide the cell by the slot count before `fitDiameterDp` - columns for GRID, rows for
+  STACK using the square-cell proxy - and log the slot width instead of the cell width. Deferred
+  because it changes the fitted-size rule and needs the launcher matrix (T4.17) to judge it.
 
 ---
 

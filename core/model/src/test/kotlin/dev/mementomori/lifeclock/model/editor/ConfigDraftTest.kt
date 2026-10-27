@@ -92,6 +92,29 @@ class ConfigDraftTest : StringSpec({
         draft().validate().shouldBeEmpty()
     }
 
+    "a start at or after the deadline is refused, so the arc's total stays positive" {
+        draft().withStart(2_000).validate().shouldContain(ConfigProblem.DEADLINE_NOT_AFTER_START)
+        draft().withStart(2_001).validate().shouldContain(ConfigProblem.DEADLINE_NOT_AFTER_START)
+        draft().withStart(1_999).validate().shouldBeEmpty()
+    }
+
+    "the schedule, the type and the person are not part of the look" {
+        val preset = draft().withTemplate(RingTemplate.BOLD)
+
+        preset.withStart(1_500).value.startEpochMillis shouldBe 1_500
+        preset.withStart(1_500).value.template shouldBe RingTemplate.BOLD
+        preset.withDeadline(9_000).value.template shouldBe RingTemplate.BOLD
+        preset.withType(WidgetType.LIFE_CLOCK).value.template shouldBe RingTemplate.BOLD
+        preset.withProfile("p2").value.template shouldBe RingTemplate.BOLD
+    }
+
+    "a preset that was already made custom stays custom through a schedule edit" {
+        draft()
+            .withStyle(0) { it.copy(diameterDp = 200) }
+            .withStart(1_500)
+            .value.template shouldBe RingTemplate.CUSTOM
+    }
+
     "a life clock needs a profile" {
         draft(WidgetType.LIFE_CLOCK).withProfile(null).validate()
             .shouldContain(ConfigProblem.MISSING_PROFILE)

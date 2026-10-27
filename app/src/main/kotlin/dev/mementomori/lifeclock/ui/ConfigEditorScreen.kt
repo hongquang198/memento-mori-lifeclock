@@ -106,7 +106,10 @@ fun ConfigEditorScreen(viewModel: MainViewModel, initial: WidgetConfigRecord, on
 
         item {
             if (config.type == WidgetType.COUNTDOWN) {
-                DeadlineRow(config, context) { draft = draft.withDeadline(it) }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StartRow(config, context) { draft = draft.withStart(it) }
+                    DeadlineRow(config, context) { draft = draft.withDeadline(it) }
+                }
             } else {
                 ProfileRow(profiles, config.profileRef) { draft = draft.withProfile(it) }
             }
@@ -202,6 +205,33 @@ private fun <T> ChipRow(
             }
         }
     }
+}
+
+@Composable
+private fun StartRow(config: WidgetConfigRecord, context: Context, onPick: (Long) -> Unit) {
+    val zone = remember { ZoneId.systemDefault() }
+    val current = Instant.ofEpochMilli(config.startEpochMillis).atZone(zone).toLocalDate()
+
+    OutlinedButton(
+        onClick = {
+            DatePickerDialog(
+                context,
+                { _, year, month, day ->
+                    // Start of the chosen day: "it started on the 1st" means from 00:00, which is
+                    // also what makes the arc's total span readable as whole days.
+                    onPick(
+                        LocalDate.of(year, month + 1, day)
+                            .atStartOfDay(zone)
+                            .toInstant()
+                            .toEpochMilli(),
+                    )
+                },
+                current.year,
+                current.monthValue - 1,
+                current.dayOfMonth,
+            ).show()
+        },
+    ) { Text("Starts: $current") }
 }
 
 @Composable
@@ -388,6 +418,6 @@ private fun ConfigProblem.label(): String = when (this) {
     ConfigProblem.NAME_BLANK -> "name is empty"
     ConfigProblem.NO_RINGS -> "add at least one ring"
     ConfigProblem.MISSING_DEADLINE -> "pick a deadline"
-    ConfigProblem.DEADLINE_NOT_AFTER_START -> "the deadline is in the past"
+    ConfigProblem.DEADLINE_NOT_AFTER_START -> "the start must be before the deadline"
     ConfigProblem.MISSING_PROFILE -> "pick a person"
 }
