@@ -3,6 +3,8 @@ package dev.mementomori.lifeclock.widget.refresh
 import dev.mementomori.lifeclock.data.InMemoryLifeClockStore
 import dev.mementomori.lifeclock.data.LifeClockStore
 import dev.mementomori.lifeclock.model.RefreshIntent
+import dev.mementomori.lifeclock.model.RingConfigRecord
+import dev.mementomori.lifeclock.model.TimeCategory
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
 import kotlinx.coroutines.runBlocking
@@ -30,6 +32,22 @@ private suspend fun LifeClockStore.bindCountdown(configId: String, intent: Refre
             startEpochMillis = 0,
             endEpochMillis = 1,
             granularity = intent,
+        ),
+    )
+    bindings.bind(configId, configId)
+}
+
+/** A realistic countdown: one hours ring, a deadline down to the minute, refreshed DAILY. */
+private suspend fun LifeClockStore.bindHoursCountdown(configId: String, deadline: Instant) {
+    configs.save(
+        WidgetConfigRecord(
+            configId = configId,
+            name = configId,
+            type = WidgetType.COUNTDOWN,
+            startEpochMillis = 0,
+            endEpochMillis = deadline.toEpochMilli(),
+            rings = listOf(RingConfigRecord(TimeCategory.HOURS)),
+            granularity = RefreshIntent.DAILY,
         ),
     )
     bindings.bind(configId, configId)
@@ -147,6 +165,32 @@ class RefreshGateTest {
         val retry = gate.tick(NEXT_MIDNIGHT.plusSeconds(60), force = false) { draws++ }
         assertTrue(retry.drew)
         assertEquals(1, draws)
+    }
+
+    @Test
+    fun `an hours ring wakes at its next label change, not at midnight`() = runBlocking {
+        // 10:15 with a deadline at 22:45: "23 hours" becomes "22 hours" at 10:45, so a DAILY
+        // widget must not sleep until 00:00 (F8: it did, and froze for ten hours in Doze).
+        val store = InMemoryLifeClockStore().apply {
+            bindHoursCountdown("green", Instant.parse("2026-06-20T22:45:00Z"))
+        }
+        val gate = RefreshGate(TestDependencies(store))
+        var draws = 0
+
+        gate.tick(Instant.parse("2026-06-15T10:15:00Z"), force = false) { draws++ }
+        val decision = gate.tick(Instant.parse("2026-06-15T10:16:00Z"), force = false) { draws++ }
+
+        assertEquals(1, draws)
+        assertEquals(Instant.parse("2026-06-15T10:45:00Z"), decision.nextAt)
+    }
+
+    @Test
+    fun `a daily ring still sleeps until midnight`() = runBlocking {
+        val store = InMemoryLifeClockStore().apply { bindCountdown("daily", RefreshIntent.DAILY) }
+        val gate = RefreshGate(TestDependencies(store))
+        gate.tick(NOON, force = false) {}
+
+        assertEquals(NEXT_MIDNIGHT, gate.tick(NOON.plusSeconds(60), force = false) {}.nextAt)
     }
 
     @Test

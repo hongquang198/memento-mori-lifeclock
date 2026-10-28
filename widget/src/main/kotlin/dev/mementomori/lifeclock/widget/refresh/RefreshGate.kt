@@ -1,8 +1,10 @@
 package dev.mementomori.lifeclock.widget.refresh
 
 import dev.mementomori.lifeclock.model.RefreshIntent
+import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.scheduler.RefreshBoundaries
 import dev.mementomori.lifeclock.scheduler.RefreshCycle
+import dev.mementomori.lifeclock.scheduler.RefreshSchedule
 import dev.mementomori.lifeclock.scheduler.RefreshState
 import dev.mementomori.lifeclock.scheduler.WidgetLifecycle
 import kotlinx.coroutines.flow.first
@@ -52,11 +54,19 @@ class RefreshGate(private val dependencies: WidgetDependencies) {
      * state stays REFRESHED and the next tick retries.
      */
     suspend fun tick(now: Instant, force: Boolean, draw: suspend () -> Unit): Decision = mutex.withLock {
-        val intents = activeIntents()
-        if (intents.isEmpty()) {
+        val configs = boundConfigs()
+        if (configs.isEmpty()) {
             states = emptyMap()
             return@withLock Decision(drew = false, nextAt = null)
         }
+        val intents = configs.map { it.granularity }.toSet()
+
+        // The intent is what the user pays for; a ring's count changing is what they see. The
+        // earlier wins, or a DAILY countdown with an hours ring sleeps until midnight while its
+        // number goes stale by hours - measured on device, 2026-10-28.
+        val mustDrawBy = configs
+            .mapNotNull { RefreshSchedule.contentChange(it, now, dependencies.zone) }
+            .minOrNull()
 
         // A fresh process has no memory of the last redraw, so it must redraw once: the frame on
         // screen may predate a reboot. Same for `force` (boot, time or timezone change).
@@ -65,10 +75,10 @@ class RefreshGate(private val dependencies: WidgetDependencies) {
 
         states = intents.associateWith { intent ->
             val scheduled = when (states[intent]?.lifecycle) {
-                null, WidgetLifecycle.IDLE -> cycle.onEnabled(now, intent)
+                null, WidgetLifecycle.IDLE -> cycle.onEnabled(now, intent, mustDrawBy)
                 else -> states.getValue(intent)
             }
-            cycle.onTick(scheduled, now, intent)
+            cycle.onTick(scheduled, now, intent, mustDrawBy)
         }
 
         val due = unseen || states.values.any { it.lifecycle == WidgetLifecycle.REFRESHED }
@@ -80,12 +90,12 @@ class RefreshGate(private val dependencies: WidgetDependencies) {
         Decision(drew = due, nextAt = states.values.mapNotNull { it.nextRefreshAt }.minOrNull())
     }
 
-    /** The granularity of every bound config, skipping bindings whose config was deleted. */
-    private suspend fun activeIntents(): Set<RefreshIntent> {
+    /** Every bound config, skipping bindings whose config was deleted. */
+    private suspend fun boundConfigs(): List<WidgetConfigRecord> {
         val bindings = dependencies.bindings.observeAllBindings().first()
-        if (bindings.isEmpty()) return emptySet()
+        if (bindings.isEmpty()) return emptyList()
         val configs = dependencies.configs.observeAll().first().associateBy { it.configId }
-        return bindings.mapNotNull { configs[it.configId]?.granularity }.toSet()
+        return bindings.mapNotNull { configs[it.configId] }
     }
 }
 

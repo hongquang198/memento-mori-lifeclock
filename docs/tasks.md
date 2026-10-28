@@ -391,6 +391,26 @@ not assurances.
   spring-forward gap resolving forward) and `WidgetSpecResolverTest` ("a countdown inside one day
   draws hours and days from the same span": 09:00 -> 17:00 read at noon is 5 h and 1 day, one
   fraction).
+- [x] **F8** A countdown showing hours was refreshed on a daily schedule, so overnight it was simply
+  wrong. `RefreshGate.activeIntents()` derived the only Doze-proof alarm from `config.granularity`
+  (`DAILY` -> midnight) and no ring's contents entered the decision. Measured on device: the armed
+  alarm was `2026-10-29 00:00:00 window=+1h`, the last wake was `-10h29m`, and the 15-minute job sat
+  unsatisfied with `TIMING_DELAY` because the phone was dozing. The frame showed `23 hours` from
+  00:04 until the deferred job ran after the unlock at 09:45, then jumped to `13 hours` - so the
+  number the user read was up to ten hours wrong, and the fix could not be "draw more often".
+  **Rule now:** the intent is a *ceiling* on staleness, the content is a *floor* on freshness, and
+  the earlier wins. `RefreshSchedule.contentChange` returns the next instant any ring's count
+  changes: for `HOURS`/`DAYS`/`WEEKS` that is `deadline - (ceil(remaining/unit) - 1) * unit` (the
+  deadline's own minute, not the hour), and for `MONTHS` or any life-clock ring the next local
+  midnight, because those counts are date comparisons. `mustDrawBy` threads through
+  `RefreshBoundaries.nextBoundary` (ignored when not in the future, so the schedule cannot stall) and
+  `RefreshCycle.onTick`, and the gate takes the minimum across bound configs.
+  Pinned by `RefreshScheduleTest` (an hours ring moves at the deadline's minute, one hour left lands
+  on the deadline, a passed deadline has nothing left, days/weeks move on the deadline's own grid,
+  the finest ring wins, months and life clocks move at local midnight, no rings means no content
+  wakeup), `RefreshBoundariesTest` (the earlier of intent and content, a later content change does
+  not delay the intent, a past one cannot stall it), and `RefreshGateTest` ("an hours ring wakes at
+  its next label change, not at midnight" - 10:15 -> 10:45, not 00:00).
 
 ---
 

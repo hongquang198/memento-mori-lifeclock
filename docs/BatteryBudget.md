@@ -11,12 +11,15 @@ the numbers can be reproduced, not trusted.
 | Mechanism | Cadence | Why it exists |
 | --- | --- | --- |
 | `PeriodicWorkRequest` (`CountdownRefreshWorker`) | every 15 min (WorkManager's floor) | heartbeat: survives reboot and Doze, imprecise by design |
-| `AlarmManager.setAndAllowWhileIdle` | one alarm at the next boundary (midnight for `DAYS`) | precision: WorkManager alone can be a period late |
+| `AlarmManager.setAndAllowWhileIdle` | one alarm at the earlier of the next intent boundary and the next label change | precision: WorkManager alone can be a period late, and a midnight alarm cannot serve an hourly ring |
 | `updatePeriodMillis` | **0** | the system's own periodic update would fight the two above |
 | Foreground service / exact alarms / network | none | not needed, and both are restricted |
 
-Worst case per widget per day: 96 worker wakeups, of which **at most one draws** (the refresh gate
-skips a tick whose boundary has not been crossed). One alarm, inexact, one hour of slack.
+Worst case per widget per day: 96 worker wakeups, of which **at most one per label change draws** (the
+refresh gate skips a tick whose boundary has not been crossed). The gate's boundary is the earlier of
+the intent and the next ring-count change, so the draw count is bounded by the finest ring the widget
+draws: a countdown showing hours at most 24 times a day, one showing weeks at most once a week. One
+alarm, inexact, up to an hour of slack.
 
 ## 2. Measured: what is actually scheduled
 
@@ -57,6 +60,32 @@ RTC_WAKEUP #76: ... dev.mementomori.lifeclock
 
 `flags=0x20` is `FLAG_ALLOW_WHILE_IDLE`; the one-hour window is the price of not holding
 `SCHEDULE_EXACT_ALARM`.
+
+### The label, not the intent, sets the alarm (F8)
+
+The dump above was the bug, not the budget. `2026-10-28 00:00:00` is midnight, which is the right
+boundary for a widget whose finest ring is `DAYS` and the wrong one for a 24-hour countdown with an
+`HOURS` ring: its label changed every hour, and the only Doze-proof wakeup was ten hours away. The
+widget showed `23 hours` from 00:04 until the deferred 15-minute job finally ran after the phone was
+unlocked at 09:45, then jumped to `13 hours`.
+
+Now the armed alarm is the **next label change** whenever that is earlier than the intent:
+
+```
+RTC_WAKEUP ... tag=*walarm*:dev.mementomori.lifeclock.widget.BOUNDARY
+  origWhen=2026-10-28 11:59:00.000 window=+43m17s663ms flags=0x20
+```
+
+(Measured 11:01: `refresh(android.intent.action.MY_PACKAGE_REPLACED): drew=true widgets=3
+next=2026-10-28T04:59:00Z` - 11:59 local, the hour the `12 hours` label becomes `11 hours`.)
+
+`RefreshSchedule.contentChange` computes it per ring: a count of `ceil(remaining / unit)` decrements
+at `deadline - (count - 1) * unit`, so a countdown ending at 22:45 shows `22 hours` from 21:45 on.
+Calendar-shaped rings (`MONTHS`, and every life-clock ring) move at local midnight, because the engine
+compares dates. `RefreshIntent` stays what the user chose - a ceiling on how stale a frame may be -
+and the content is a floor under it; `RefreshBoundaries.nextBoundary` takes the earlier of the two.
+The honesty of the guarantee is unchanged: **staleness is bounded by the finest ring's unit plus
+platform batching**, up to an hour, because the alarm is inexact.
 
 ### A job that looks like a defect and is not
 

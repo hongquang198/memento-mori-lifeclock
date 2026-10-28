@@ -53,6 +53,30 @@ class RefreshBoundariesTest : FunSpec({
             Instant.parse("2026-06-16T00:00:00Z")
     }
 
+    test("a content change earlier than the intent wins") {
+        utc.nextBoundary(
+            Instant.parse("2026-06-15T10:15:00Z"),
+            RefreshIntent.DAILY,
+            mustDrawBy = Instant.parse("2026-06-15T10:45:00Z"),
+        ) shouldBe Instant.parse("2026-06-15T10:45:00Z")
+    }
+
+    test("a content change later than the intent does not delay it") {
+        utc.nextBoundary(
+            Instant.parse("2026-06-15T10:15:00Z"),
+            RefreshIntent.HOURLY,
+            mustDrawBy = Instant.parse("2026-06-15T18:45:00Z"),
+        ) shouldBe Instant.parse("2026-06-15T11:00:00Z")
+    }
+
+    test("a content change in the past cannot stall the schedule") {
+        utc.nextBoundary(
+            Instant.parse("2026-06-15T10:15:00Z"),
+            RefreshIntent.DAILY,
+            mustDrawBy = Instant.parse("2026-06-15T09:00:00Z"),
+        ) shouldBe Instant.parse("2026-06-16T00:00:00Z")
+    }
+
     test("every intent always moves strictly forward, in any timezone") {
         val zones = listOf(UTC, BERLIN, ZoneId.of("Asia/Kathmandu"), ZoneId.of("America/Sao_Paulo"))
         val instants = listOf(

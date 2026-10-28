@@ -31,14 +31,19 @@ data class RefreshState(
  */
 class RefreshCycle(private val boundaries: RefreshBoundaries) {
 
-    fun onEnabled(now: Instant, intent: RefreshIntent): RefreshState =
-        RefreshState(WidgetLifecycle.SCHEDULED, boundaries.nextBoundary(now, intent))
+    fun onEnabled(now: Instant, intent: RefreshIntent, mustDrawBy: Instant? = null): RefreshState =
+        RefreshState(WidgetLifecycle.SCHEDULED, boundaries.nextBoundary(now, intent, mustDrawBy))
 
     /** Advances the cycle. A non-[WidgetLifecycle.IDLE] state whose boundary has passed becomes REFRESHED. */
-    fun onTick(state: RefreshState, now: Instant, intent: RefreshIntent): RefreshState = when {
+    fun onTick(
+        state: RefreshState,
+        now: Instant,
+        intent: RefreshIntent,
+        mustDrawBy: Instant? = null,
+    ): RefreshState = when {
         state.lifecycle == WidgetLifecycle.IDLE -> state
         state.nextRefreshAt != null && now.isBefore(state.nextRefreshAt) -> state
-        else -> RefreshState(WidgetLifecycle.REFRESHED, boundaries.nextBoundary(now, intent))
+        else -> RefreshState(WidgetLifecycle.REFRESHED, boundaries.nextBoundary(now, intent, mustDrawBy))
     }
 
     /** Called once the widget has actually been redrawn (or failed to be). */
