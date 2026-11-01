@@ -52,6 +52,47 @@ adb logcat -s LifeClockWidget:*
 
 On Windows use `gradlew.bat` (or `.\gradlew`) instead of `./gradlew`.
 
+### Signing a build you can share
+
+Android only installs **signed** APKs. `assembleRelease` without a `signingConfig` writes
+`app-release-unsigned.apk`, and installing that fails with `INSTALL_FAILED_NO_CERTIFICATES` - the
+file looks fine, it just cannot be installed. (Flutter hides this: its template signs release builds
+with the debug key, so `flutter build apk --release` installs anywhere. AGP has no such default.)
+
+One-time setup, then every release build is signed:
+
+```bash
+# 1. Create the keystore (10,000 days, RSA 2048). Keep it out of git - it IS your app's identity.
+keytool -genkeypair -v -keystore keystore/memento-release.jks -alias memento \
+  -keyalg RSA -keysize 2048 -validity 10000
+
+# 2. Point the build at it (this file is gitignored; storeFile is relative to the repo root)
+#    storeFile=keystore/memento-release.jks
+#    storePassword=...
+#    keyAlias=memento
+#    keyPassword=...
+
+# 3. Build -> app/build/outputs/apk/release/app-release.apk
+./gradlew :app:assembleRelease
+
+# 4. Prove it is signed before sending it to anyone
+apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+```
+
+Without `keystore.properties` the build still succeeds, but it is unsigned again - so the file name
+(`app-release.apk` vs `app-release-unsigned.apk`) is the quick check.
+
+Rules that save a support conversation later:
+
+- **Never lose the keystore.** The same key is what lets a new APK install *over* the old one; a new
+  key means the friend must uninstall first (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
+- **Uninstall any earlier build first** when the key changed - including your own debug APK, which is
+  signed with the machine's debug key.
+- `minSdk = 26` means Android 8.0+; older phones fail with "app not compatible".
+- Sideloading also needs "install unknown apps" for the app doing the install, and Play Protect may
+  ask you to confirm ("Install anyway"). Prefer a file link (Drive) over a chat app, which may strip
+  or block `.apk` attachments.
+
 If `:widget:bundleLibCompileToJarDebug` fails with "The process cannot access the file", a Kotlin
 daemon or language server is holding the jar: kill `java.exe` processes whose command line matches
 `kotlin-daemon|kotlinLanguageServer`, delete `widget/build/intermediates/compile_library_classes_jar`,

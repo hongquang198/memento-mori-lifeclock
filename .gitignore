@@ -22,5 +22,10 @@ Thumbs.db
 *.class
 *.log
 
-# Roborazzi / screenshot outputs
+// Roborazzi / screenshot outputs
 **/build/outputs/roborazzi/
+
+# Release signing: the keystore is a credential, not source. Losing it means you can never
+# update the app again; leaking it means someone else can sign as you. Back both up off-repo.
+keystore.properties
+keystore/

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 // :app — the composition root: wires all modules together, hosts the Hilt graph,
 // declares the APK entry point (Application + Activity) and the app's manifest.
 plugins {
@@ -21,6 +23,28 @@ android {
         versionName = "0.1.0"
     }
 
+    // Release signing lives outside the repo: keystore.properties points at a .jks that must never
+    // be committed. Without the file the build still succeeds, but the APK is unsigned and Android
+    // refuses to install it - which is exactly what assembleRelease produced before this block.
+    // (Flutter hides this: its template signs release with the debug key, so `flutter build apk`
+    // installs anywhere. AGP has no such default.)
+    val signingProperties = Properties().apply {
+        val file = rootProject.file("keystore.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+    val hasReleaseKey = signingProperties.getProperty("storeFile") != null
+
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = rootProject.file(signingProperties.getProperty("storeFile"))
+                storePassword = signingProperties.getProperty("storePassword")
+                keyAlias = signingProperties.getProperty("keyAlias")
+                keyPassword = signingProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,6 +52,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Signed release output: app-release.apk instead of app-release-unsigned.apk.
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
