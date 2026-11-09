@@ -34,7 +34,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mementomori.lifeclock.model.LabelPlacement
 import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.RingConfigRecord
@@ -74,8 +74,8 @@ import kotlin.math.roundToInt
 fun ConfigEditorScreen(viewModel: MainViewModel, initial: WidgetConfigRecord, onDone: () -> Unit) {
     var draft by remember(initial.configId) { mutableStateOf(ConfigDraft(initial).sanitized()) }
     val config = draft.value
-    val profiles by viewModel.profiles.collectAsState()
-    val configs by viewModel.configs.collectAsState()
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val configs by viewModel.configs.collectAsStateWithLifecycle()
 
     val spec = remember(config, profiles) { viewModel.specFor(config) }
     val snapshot = remember(config, profiles) { viewModel.snapshotFor(config) }

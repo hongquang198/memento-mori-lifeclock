@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mementomori.lifeclock.model.Sex
 import dev.mementomori.lifeclock.model.TimeCategory
 import dev.mementomori.lifeclock.mortality.ProfileDraft
@@ -47,9 +48,8 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun ProfileEditorScreen(viewModel: MainViewModel, profileId: String?, onDone: () -> Unit) {
-    val existing = remember(profileId) {
-        viewModel.profiles.value.firstOrNull { it.profileId == profileId }
-    }
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val existing = remember(profileId) { profiles.firstOrNull { it.profileId == profileId } }
     var draft by remember(profileId) {
         mutableStateOf(
             existing?.let {

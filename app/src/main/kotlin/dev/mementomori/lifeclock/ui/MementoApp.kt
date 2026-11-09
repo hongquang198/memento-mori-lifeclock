@@ -25,7 +25,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
@@ -116,7 +116,7 @@ private fun Screen.title(): String = when (this) {
 fun MementoApp(viewModel: MainViewModel) {
     var screen by rememberSaveable(stateSaver = ScreenSaver) { mutableStateOf<Screen>(Screen.Home) }
     val snackbar = remember { SnackbarHostState() }
-    val message by viewModel.message.collectAsState()
+    val message by viewModel.message.collectAsStateWithLifecycle()
 
     BackHandler(enabled = screen != Screen.Home) { screen = Screen.Home }
 
@@ -174,8 +174,8 @@ private fun HomeScreen(
     onConfig: (WidgetConfigRecord) -> Unit,
     onWidgets: () -> Unit,
 ) {
-    val profiles by viewModel.profiles.collectAsState()
-    val configs by viewModel.configs.collectAsState()
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val configs by viewModel.configs.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -262,7 +262,7 @@ private fun ConfigCard(
 
 @Composable
 private fun WidgetsScreen(viewModel: MainViewModel) {
-    val placed by viewModel.placed.collectAsState()
+    val placed by viewModel.placed.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) { viewModel.refreshPlaced() }
