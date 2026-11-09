@@ -1,9 +1,16 @@
-package dev.mementomori.lifeclock.data
+package dev.mementomori.lifeclock.contracts
 
 import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetInstanceBinding
 import kotlinx.coroutines.flow.Flow
+
+/*
+ * These interfaces used to live in `:data` next to the DataStore implementation. They moved here
+ * because of what they actually are: ports. A use case has to name a repository to do its job, and
+ * a use case may not depend on the storage engine. Interfaces in the data layer force exactly that
+ * dependency; interfaces in the domain invert it.
+ */
 
 /** Outcome of a delete request. A boolean would lose the reason, and the UI must show it. */
 sealed interface DeleteConfigResult {
@@ -64,49 +71,4 @@ interface ProfileRepository {
 
     /** Refuses while any config still references [profileId]. */
     suspend fun delete(profileId: String): DeleteProfileResult
-}
-
-/** Shared rules, used by every implementation so they cannot drift apart. */
-internal object StoreRules {
-
-    fun upsertBinding(
-        current: List<WidgetInstanceBinding>,
-        next: WidgetInstanceBinding,
-    ): List<WidgetInstanceBinding> = current.filterNot { it.glanceId == next.glanceId } + next
-
-    fun boundGlanceIds(
-        bindings: List<WidgetInstanceBinding>,
-        configId: String,
-    ): List<String> = bindings.filter { it.configId == configId }.map { it.glanceId }
-
-    /** Replace in place to keep catalog order; append only when the id is new. */
-    fun upsertConfig(
-        current: List<WidgetConfigRecord>,
-        next: WidgetConfigRecord,
-    ): List<WidgetConfigRecord> {
-        val index = current.indexOfFirst { it.configId == next.configId }
-        return if (index >= 0) {
-            current.toMutableList().also { it[index] = next }
-        } else {
-            current + next
-        }
-    }
-
-    fun upsertProfile(
-        current: List<PersonProfile>,
-        next: PersonProfile,
-    ): List<PersonProfile> {
-        val index = current.indexOfFirst { it.profileId == next.profileId }
-        return if (index >= 0) {
-            current.toMutableList().also { it[index] = next }
-        } else {
-            current + next
-        }
-    }
-
-    /** Configs that would be left computing from nothing if the profile were deleted. */
-    fun configsReferencing(
-        configs: List<WidgetConfigRecord>,
-        profileId: String,
-    ): List<String> = configs.filter { it.profileRef == profileId }.map { it.configId }
 }

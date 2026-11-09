@@ -20,6 +20,9 @@ kotlin { jvmToolchain(17) }
 
 dependencies {
     api(project(":domain:model"))
+    // The repository interfaces this module implements. `api` so a consumer that only depends on
+    // :data can still name the contract it is handed.
+    api(project(":domain:contracts"))
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
 

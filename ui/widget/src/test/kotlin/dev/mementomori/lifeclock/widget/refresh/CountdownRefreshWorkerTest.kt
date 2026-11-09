@@ -7,8 +7,8 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import androidx.work.workDataOf
 import dev.mementomori.lifeclock.data.InMemoryLifeClockStore
-import dev.mementomori.lifeclock.data.LifeClockStore
-import dev.mementomori.lifeclock.data.WidgetBindingRepository
+import dev.mementomori.lifeclock.contracts.LifeClockStore
+import dev.mementomori.lifeclock.contracts.WidgetBindingRepository
 import dev.mementomori.lifeclock.model.WidgetInstanceBinding
 import dev.mementomori.lifeclock.widget.TestDependencies
 import dev.mementomori.lifeclock.widget.WidgetDependenciesHolder

@@ -32,6 +32,8 @@ app widgets are a second UI surface that Compose cannot draw.
 | `:domain:time` | domain | Kotlin, `java.time` |
 | `:domain:mortality` | domain | Kotlin, bundled CSV resources |
 | `:domain:scheduler` | domain | Kotlin, `java.time` |
+| `:domain:contracts` | domain | Kotlin, `kotlinx.coroutines` (a `Flow` is part of the contract) |
+| `:domain:usecases` | domain | the contracts and the model - never a platform API |
 | `:data` | data | DataStore, the domain contracts |
 | `:ui:widget` | UI | Glance, `AppWidgetManager`, `AlarmManager`, WorkManager |
 | `:app` | UI + composition root | Compose, Hilt, `Context` |
@@ -122,7 +124,8 @@ list and that callback, owned by a library.
 2. Does it combine two repositories, or "do X then Y"? → `:domain:usecases/`
 3. Does it parse, compute, or decide something with no I/O? → the matching `:domain:*`
 4. Does it read or write storage? → `:data/`
-5. Does it need `Context`, Glance, alarms, or WorkManager? → `:ui:widget/` (or `:app` for Compose)
+5. Does it declare what the UI needs from the platform? → `:domain:contracts/` (a port); implement it in `:app/di/`
+6. Does it need `Context`, Glance, alarms, or WorkManager? → `:ui:widget/` (or `:app` for Compose)
 
 If it fits none of those, the design is wrong — not the naming.
 

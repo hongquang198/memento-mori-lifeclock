@@ -1,5 +1,12 @@
 package dev.mementomori.lifeclock.data
 
+
+import dev.mementomori.lifeclock.contracts.DeleteConfigResult
+import dev.mementomori.lifeclock.contracts.DeleteProfileResult
+import dev.mementomori.lifeclock.contracts.WidgetConfigRepository
+import dev.mementomori.lifeclock.contracts.WidgetBindingRepository
+import dev.mementomori.lifeclock.contracts.ProfileRepository
+import dev.mementomori.lifeclock.contracts.LifeClockStore
 import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetInstanceBinding

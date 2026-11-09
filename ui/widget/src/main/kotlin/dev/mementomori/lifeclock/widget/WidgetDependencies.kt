@@ -1,8 +1,8 @@
 package dev.mementomori.lifeclock.widget
 
-import dev.mementomori.lifeclock.data.ProfileRepository
-import dev.mementomori.lifeclock.data.WidgetBindingRepository
-import dev.mementomori.lifeclock.data.WidgetConfigRepository
+import dev.mementomori.lifeclock.contracts.ProfileRepository
+import dev.mementomori.lifeclock.contracts.WidgetBindingRepository
+import dev.mementomori.lifeclock.contracts.WidgetConfigRepository
 import dev.mementomori.lifeclock.mortality.LifeStatsEngine
 import dev.mementomori.lifeclock.time.Clock
 import dev.mementomori.lifeclock.time.CountdownModel

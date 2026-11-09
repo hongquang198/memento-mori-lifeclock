@@ -57,6 +57,15 @@ data class WidgetInstanceBinding(
 )
 
 /**
+ * The storage key for a placed instance.
+ *
+ * It lives with [WidgetInstanceBinding] rather than with the widget code because it is a *storage*
+ * format: the widget writes bindings with it, the app reads them with it, and a use case in between
+ * must not have to import Android to spell the key.
+ */
+fun appWidgetBindingKey(appWidgetId: Int): String = appWidgetId.toString()
+
+/**
  * Whether a widget can draw this config at all: one ring whose category an engine emits.
  *
  * Authoring, binding and rendering all ask this one question, so they cannot disagree. Their

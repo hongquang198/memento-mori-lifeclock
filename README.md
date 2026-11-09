@@ -23,6 +23,8 @@ without a table to memorise. `settings.gradle.kts` groups them the same way.
 | `:domain:time` | JVM | domain | `TimeSlice`, calendar categories, remaining-fraction math |
 | `:domain:mortality` | JVM | domain | life-table parsing, `LifeStatsEngine`, `ProfileValidator`, `ProfileDraft` |
 | `:domain:scheduler` | JVM | domain | refresh cadence policy - no Android types |
+| `:domain:contracts` | JVM | domain | repository interfaces, delete results, the `WidgetRefresher`/`WidgetPlacements` ports |
+| `:domain:usecases` | JVM | domain | save/delete/duplicate/list operations over those ports |
 | `:data` | Android lib | data | DataStore repositories + delete guards |
 | `:ui:widget` | Android lib | UI | Glance widget, ring rendering, picker, workers, refresh gate |
 | `:app` | Android app | UI + composition root | Hilt graph, wiring, the Compose screens |

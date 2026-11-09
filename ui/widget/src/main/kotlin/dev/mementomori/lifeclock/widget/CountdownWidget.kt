@@ -11,6 +11,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
+import dev.mementomori.lifeclock.model.appWidgetBindingKey
 import dev.mementomori.lifeclock.widget.ring.CachedRingRenderer
 import dev.mementomori.lifeclock.widget.refresh.UnbindWidgetsWorker
 import dev.mementomori.lifeclock.widget.content.WidgetContent
@@ -69,8 +70,6 @@ private val processRingRenderer = CachedRingRenderer()
  * widget and settings would disagree about which instance they mean.
  */
 /** The key a placed instance is stored under, from its platform id. One definition, two callers. */
-fun appWidgetBindingKey(appWidgetId: Int): String = appWidgetId.toString()
-
 fun GlanceId.bindingKey(): String = when (this) {
     is AppWidgetId -> appWidgetBindingKey(appWidgetId)
     else -> toString()

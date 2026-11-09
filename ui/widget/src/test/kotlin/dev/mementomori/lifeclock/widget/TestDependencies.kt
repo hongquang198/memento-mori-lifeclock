@@ -1,6 +1,6 @@
 package dev.mementomori.lifeclock.widget
 
-import dev.mementomori.lifeclock.data.LifeClockStore
+import dev.mementomori.lifeclock.contracts.LifeClockStore
 import dev.mementomori.lifeclock.mortality.CsvLifeTableSource
 import dev.mementomori.lifeclock.mortality.LifeStatsEngine
 import dev.mementomori.lifeclock.time.Clock

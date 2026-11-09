@@ -1,55 +1,62 @@
 package dev.mementomori.lifeclock.ui
 
-import android.app.Application
-import dev.mementomori.lifeclock.widget.appWidgetBindingKey
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.mementomori.lifeclock.data.DeleteConfigResult
-import dev.mementomori.lifeclock.data.DeleteProfileResult
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.mementomori.lifeclock.contracts.DeleteConfigResult
+import dev.mementomori.lifeclock.contracts.DeleteProfileResult
+import dev.mementomori.lifeclock.contracts.PlacedWidget
+import dev.mementomori.lifeclock.contracts.WidgetRefresher
 import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.RingPresets
 import dev.mementomori.lifeclock.model.RingTemplate
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
-import dev.mementomori.lifeclock.model.WidgetInstanceBinding
 import dev.mementomori.lifeclock.model.WidgetType
 import dev.mementomori.lifeclock.mortality.LifeSnapshot
 import dev.mementomori.lifeclock.mortality.ProfileDraft
-import dev.mementomori.lifeclock.widget.WidgetDependenciesHolder
-import dev.mementomori.lifeclock.widget.refresh.WidgetRefreshScheduler
-import dev.mementomori.lifeclock.widget.refresh.placedWidgetIds
+import dev.mementomori.lifeclock.usecases.DeleteConfigUseCase
+import dev.mementomori.lifeclock.usecases.DeleteProfileUseCase
+import dev.mementomori.lifeclock.usecases.DuplicateConfigUseCase
+import dev.mementomori.lifeclock.usecases.ListPlacedWidgetsUseCase
+import dev.mementomori.lifeclock.usecases.SaveConfigUseCase
+import dev.mementomori.lifeclock.usecases.SaveProfileUseCase
+import dev.mementomori.lifeclock.widget.WidgetDependencies
 import dev.mementomori.lifeclock.widget.render.WidgetSpec
 import dev.mementomori.lifeclock.widget.render.WidgetSpecResolver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-
-/** One placed instance, resolved for the "Your widgets" list. */
-data class PlacedWidget(
-    val appWidgetId: Int,
-    val configId: String?,
-    val configName: String?,
-)
+import javax.inject.Inject
 
 /**
  * The app's only state holder.
  *
- * It reads the same graph the widget uses ([WidgetDependenciesHolder]) instead of building a second
- * one: a config saved here is the config the next draw reads, because there is only one store.
- * The widget itself is redrawn through the same worker, never directly.
+ * Note what is *not* in the constructor: a `Context`. It used to be an `AndroidViewModel` that built
+ * a `WidgetRefreshScheduler` and called `AppWidgetManager` itself, which meant the screen's state
+ * holder could only be tested on a device. The platform work now sits behind [WidgetRefresher] and
+ * the `ListPlacedWidgetsUseCase` port, and the use cases own the "save, then redraw" ordering.
+ *
+ * [WidgetDependencies] is injected whole rather than as six separate parameters because the app and
+ * the widget must share one instance of it: one store, one clock. Hilt guarantees that with
+ * `@Singleton` in `AppModule`.
  */
-class MainViewModel(app: Application) : AndroidViewModel(app) {
-
-    private val deps = requireNotNull(WidgetDependenciesHolder.current) {
-        "LifeClockApplication must publish the graph before any screen reads it"
-    }
-    private val appContext = app.applicationContext
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val deps: WidgetDependencies,
+    private val saveConfigUseCase: SaveConfigUseCase,
+    private val deleteConfigUseCase: DeleteConfigUseCase,
+    private val duplicateConfigUseCase: DuplicateConfigUseCase,
+    private val saveProfileUseCase: SaveProfileUseCase,
+    private val deleteProfileUseCase: DeleteProfileUseCase,
+    private val listPlacedWidgetsUseCase: ListPlacedWidgetsUseCase,
+    private val refresher: WidgetRefresher,
+) : ViewModel() {
 
     val profiles: StateFlow<List<PersonProfile>> =
         deps.profiles.observeAll()
@@ -110,12 +117,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveProfile(draft: ProfileDraft) = viewModelScope.launch {
-        deps.profiles.save(draft.toProfile())
-        refreshWidgets()
+        saveProfileUseCase(draft.toProfile())
     }
 
     fun deleteProfile(profileId: String) = viewModelScope.launch {
-        _message.value = when (val result = deps.profiles.delete(profileId)) {
+        _message.value = when (val result = deleteProfileUseCase(profileId)) {
             DeleteProfileResult.Deleted -> "Person deleted"
             is DeleteProfileResult.BlockedByConfigs ->
                 "Still used by ${result.configIds.size} config(s)"
@@ -124,29 +130,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveConfig(config: WidgetConfigRecord) = viewModelScope.launch {
-        deps.configs.save(config)
-        refreshWidgets()
+        saveConfigUseCase(config)
     }
 
     fun duplicateConfig(config: WidgetConfigRecord) = viewModelScope.launch {
-        deps.configs.save(
-            config.copy(configId = UUID.randomUUID().toString(), name = "${config.name} copy"),
-        )
+        duplicateConfigUseCase(config)
     }
 
     fun deleteConfig(configId: String) = viewModelScope.launch {
-        _message.value = when (val result = deps.configs.delete(configId)) {
+        _message.value = when (val result = deleteConfigUseCase(configId)) {
             DeleteConfigResult.Deleted -> "Config deleted"
             is DeleteConfigResult.BlockedByBindings ->
                 "Still used by ${result.glanceIds.size} placed widget(s)"
             DeleteConfigResult.NotFound -> "Already gone"
         }
-        refreshWidgets()
     }
 
-    /** Reads placements from the platform, never from Glance's cache (M0). */
     fun refreshPlaced() = viewModelScope.launch {
-        _placed.value = loadPlaced()
+        _placed.value = listPlacedWidgetsUseCase()
     }
 
     /**
@@ -158,8 +159,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * triggers a redraw must not nag about an unrelated unbound instance.
      */
     fun redrawNow() = viewModelScope.launch {
-        val placed = loadPlaced().also { _placed.value = it }
-        WidgetRefreshScheduler(appContext).refreshNow(reason = "app", force = true)
+        val placed = listPlacedWidgetsUseCase().also { _placed.value = it }
+        refresher.redrawNow()
 
         val unbound = placed.filter { it.configId == null }
         if (unbound.isNotEmpty()) {
@@ -168,26 +169,4 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } + ". Tap the widget, or press Choose config."
         }
     }
-
-    /** The redraw that a save owes the widget. Silent: the save already reported itself. */
-    fun refreshWidgets() {
-        WidgetRefreshScheduler(appContext).refreshNow(reason = "app", force = true)
-    }
-
-    private suspend fun loadPlaced(): List<PlacedWidget> {
-        val bindings = deps.bindings.observeAllBindings().first()
-        val known = deps.configs.observeAll().first()
-
-        return placedWidgetIds(appContext).sorted().map { id ->
-            val configId = bindingFor(bindings, id)
-            PlacedWidget(
-                appWidgetId = id,
-                configId = configId,
-                configName = known.firstOrNull { it.configId == configId }?.name,
-            )
-        }
-    }
-
-    private fun bindingFor(bindings: List<WidgetInstanceBinding>, appWidgetId: Int): String? =
-        bindings.firstOrNull { it.glanceId == appWidgetBindingKey(appWidgetId) }?.configId
 }

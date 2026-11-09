@@ -2,9 +2,9 @@ package dev.mementomori.lifeclock
 
 import android.content.Context
 import dev.mementomori.lifeclock.data.LifeClockStoreFactory
-import dev.mementomori.lifeclock.data.ProfileRepository
-import dev.mementomori.lifeclock.data.WidgetBindingRepository
-import dev.mementomori.lifeclock.data.WidgetConfigRepository
+import dev.mementomori.lifeclock.contracts.ProfileRepository
+import dev.mementomori.lifeclock.contracts.WidgetBindingRepository
+import dev.mementomori.lifeclock.contracts.WidgetConfigRepository
 import dev.mementomori.lifeclock.mortality.CsvLifeTableSource
 import dev.mementomori.lifeclock.mortality.LifeStatsEngine
 import dev.mementomori.lifeclock.time.Clock
@@ -16,9 +16,11 @@ import java.time.ZoneId
 /**
  * Builds the objects the widget layer needs.
  *
- * Hand-written on purpose. The system creates the widget receiver itself, so nothing can be
- * passed into its constructor; the objects are parked in `WidgetDependenciesHolder` instead.
- * When the config screen lands this becomes a Hilt `@EntryPoint`, and `:widget` does not change.
+ * Still hand-written, and still the only place that names a concrete storage engine. `AppModule`
+ * calls it from a `@Provides` method, so Hilt owns the lifetime (`@Singleton`) and every consumer -
+ * the ViewModel, the use cases, and the receivers through `WidgetDependenciesHolder` - receives the
+ * same instance. Replacing DataStore with something else is a change to this function and nothing
+ * above it.
  */
 object AppDependencies {
 

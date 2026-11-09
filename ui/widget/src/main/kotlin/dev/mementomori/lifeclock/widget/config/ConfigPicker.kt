@@ -1,8 +1,8 @@
 package dev.mementomori.lifeclock.widget.config
 
-import dev.mementomori.lifeclock.data.ProfileRepository
-import dev.mementomori.lifeclock.data.WidgetBindingRepository
-import dev.mementomori.lifeclock.data.WidgetConfigRepository
+import dev.mementomori.lifeclock.contracts.ProfileRepository
+import dev.mementomori.lifeclock.contracts.WidgetBindingRepository
+import dev.mementomori.lifeclock.contracts.WidgetConfigRepository
 import dev.mementomori.lifeclock.model.LabelPlacement
 import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.RefreshIntent

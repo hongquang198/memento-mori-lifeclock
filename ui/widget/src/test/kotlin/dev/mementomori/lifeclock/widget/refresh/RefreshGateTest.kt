@@ -1,7 +1,7 @@
 package dev.mementomori.lifeclock.widget.refresh
 
 import dev.mementomori.lifeclock.data.InMemoryLifeClockStore
-import dev.mementomori.lifeclock.data.LifeClockStore
+import dev.mementomori.lifeclock.contracts.LifeClockStore
 import dev.mementomori.lifeclock.model.RefreshIntent
 import dev.mementomori.lifeclock.model.RingConfigRecord
 import dev.mementomori.lifeclock.model.TimeCategory

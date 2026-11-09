@@ -74,6 +74,8 @@ dependencies {
     implementation(project(":domain:mortality"))
     implementation(project(":data"))
     implementation(project(":domain:scheduler"))
+    implementation(project(":domain:contracts"))
+    implementation(project(":domain:usecases"))
     // Outer layers
     implementation(project(":ui:widget"))
 
