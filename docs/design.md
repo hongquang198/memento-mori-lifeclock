@@ -16,27 +16,27 @@ frameworks only appear in the outer modules.
 
 ```
 :app                  (Compose app: widget catalog, editor, instance manager, Hilt, Manifest)
-  ├─ :feature:config  (widget catalog + per-widget editor + "Your widgets" manager)
-  ├─ :widget          (Glance widget, ring bitmap, Chronometer, refresh worker + receivers)
-  └─ :core:data       (DataStore, repositories)
+  ├─ :ui:config  (widget catalog + per-widget editor + "Your widgets" manager)
+  ├─ :ui:widget          (Glance widget, ring bitmap, Chronometer, refresh worker + receivers)
+  └─ :data       (DataStore, repositories)
 
-:core:scheduler  → :core:model   (pure: when a widget is due, and when to wake up)
-:core:mortality  → :core:model   (pure: life-stat engine)
-:core:time       → :core:model   (pure: countdown engine)
+:domain:scheduler  → :domain:model   (pure: when a widget is due, and when to wake up)
+:domain:mortality  → :domain:model   (pure: life-stat engine)
+:domain:time       → :domain:model   (pure: countdown engine)
 ```
 
 | Module | Responsibility (SRP) | Depends on |
 |---|---|---|
-| `:core:model` | Value types, `Citation`, enums. No logic. | — |
-| `:core:time` | Countdown decomposition (days/weeks/months/net-free-hours). | `:core:model` |
-| `:core:mortality` | Life-table + ATUS math, citation-bound stats. | `:core:model` |
-| `:core:data` | Persistence of widget configs, instance bindings & profile. | `:core:model` |
-| `:core:scheduler` | **When** a widget is due: boundary instants + the `IDLE → SCHEDULED → REFRESHED` cycle. Pure. | `:core:model` |
-| `:widget` | How a widget is drawn (ring bitmap + Chronometer) **and what wakes it up** (WorkManager, boundary alarm, receivers). | `:core:*` |
-| `:feature:config` | Widget **catalog** (create/name/edit reusable configs), editor with **live preview**, and the "Your widgets" instance manager. | `:core:*` |
+| `:domain:model` | Value types, `Citation`, enums. No logic. | — |
+| `:domain:time` | Countdown decomposition (days/weeks/months/net-free-hours). | `:domain:model` |
+| `:domain:mortality` | Life-table + ATUS math, citation-bound stats. | `:domain:model` |
+| `:data` | Persistence of widget configs, instance bindings & profile. | `:domain:model` |
+| `:domain:scheduler` | **When** a widget is due: boundary instants + the `IDLE → SCHEDULED → REFRESHED` cycle. Pure. | `:domain:model` |
+| `:ui:widget` | How a widget is drawn (ring bitmap + Chronometer) **and what wakes it up** (WorkManager, boundary alarm, receivers). | `:domain:*` |
+| `:ui:config` | Widget **catalog** (create/name/edit reusable configs), editor with **live preview**, and the "Your widgets" instance manager. | `:domain:*` |
 | `:app` | Wiring, DI, manifest. | all |
 
-Rationale: `:core:time` and `:core:mortality` are **pure JVM** — they can be unit-tested
+Rationale: `:domain:time` and `:domain:mortality` are **pure JVM** — they can be unit-tested
 with no Robolectric, no emulator, fast and deterministic (a `Clock` is injected).
 
 ---
@@ -49,9 +49,9 @@ fun interface Clock { fun now(): Instant }
 ```
 Injected at every boundary. Production: `Clock.systemUTC()`. Tests: `FakeClock`.
 
-### 2.2 Countdown engine (`:core:time`)
+### 2.2 Countdown engine (`:domain:time`)
 ```kotlin
-// TimeCategory lives in :core:model - persisted configs and the UI reference it too.
+// TimeCategory lives in :domain:model - persisted configs and the UI reference it too.
 // `emitted` is the authoring contract: a category is offered only if an engine produces it.
 enum class TimeCategory(val emitted: Boolean) {
     HOURS(true), DAYS(true), WEEKS(true), MONTHS(true), NET_FREE_HOURS(false)
@@ -68,7 +68,7 @@ data class TimeSlice(
 data class CountdownTarget(val start: Instant, val end: Instant)
 
 /** Sleep + maintenance removed before a countdown is expressed in "free" hours.
- *  The ATUS-derived default lives in `:core:mortality`; `:core:time` only does the math,
+ *  The ATUS-derived default lives in `:domain:mortality`; `:domain:time` only does the math,
  *  so the dependency never points upward. */
 data class FreeTimePolicy(
     val sleepHoursPerDay: Double,
@@ -97,12 +97,12 @@ interface CountdownModel {
   that time is displayed. A property test pins this, so four arcs in a `CONCENTRIC` widget cannot
   drift apart.
 - `NET_FREE_HOURS`: `(elapsed hours − sleep) × (1 − maintenance)`. `CountdownModel` receives a
-  `FreeTimePolicy` **at construction**, so `:core:time` never references `:core:mortality` or its
+  `FreeTimePolicy` **at construction**, so `:domain:time` never references `:domain:mortality` or its
   constants. Without a policy the slice is simply absent.
 - Clamp negatives to zero; `end <= start` ⇒ `slices()` returns an **empty list** (there is no
   meaningful fraction, and a `0/0` would be `NaN`).
 
-### 2.3 Mortality engine (`:core:mortality`)
+### 2.3 Mortality engine (`:domain:mortality`)
 ```kotlin
 enum class BiologicalSex { FEMALE, MALE, AVERAGE }
 
@@ -136,7 +136,7 @@ interface LifeStatsEngine {
 - Derived stats (heartbeats, sleep tax, books, seasons) compute from base life expectancy
   via documented formulas in `Methodology.md` (shipped next to the docs).
 
-### 2.4 The `Citation` contract (`:core:model`)
+### 2.4 The `Citation` contract (`:domain:model`)
 ```kotlin
 data class Citation(
     val sourceName: String,   // "SSA Period Life Table 2021"
@@ -148,7 +148,7 @@ Every `LifeStat` must carry one — enforced by the type, not convention.
 
 ---
 
-## 3. Persistence schema (`:core:data`)
+## 3. Persistence schema (`:data`)
 
 **Preferences DataStore + `kotlinx.serialization` JSON** (KISS vs Proto build tooling), one
 file `lifeclock.preferences_pb`, three keys: `profile`, `configs`, `bindings`.
@@ -224,7 +224,7 @@ interface ProfileRepository {
 - `LifeClockStore` bundles both repositories over one storage file. `InMemoryLifeClockStore`
   implements the same interface, so **one contract test suite runs against both** — the guard
   cannot mean something different in tests than in production.
-- `ProfileRepository` lands in M3 with `:core:mortality`; M2 only persists configs and bindings.
+- `ProfileRepository` lands in M3 with `:domain:mortality`; M2 only persists configs and bindings.
 
 Widget state is never held in memory as truth — always recomposed from these flows.
 
@@ -235,13 +235,13 @@ All settings live **in the app**. A widget is a dumb, stateless renderer of the
 
 - **Authoring (primary path):** in-app catalog — create / name / edit reusable configs with
   the appearance editor and live preview. Nothing is configured on the widget itself.
-- **Add to home screen:** `:widget` declares a configuration Activity (`android:configure`)
+- **Add to home screen:** `:ui:widget` declares a configuration Activity (`android:configure`)
   which the launcher launches with `ACTION_APPWIDGET_CONFIGURE` + `EXTRA_APPWIDGET_ID`. It
   presents a **picker** (list of saved configs + "New") and returns a result carrying the
   `appWidgetId`, then `bind(glanceId, configId)`. Because the config Activity is launched by
   the host, it **must** set a result with `EXTRA_APPWIDGET_ID` or the placement is cancelled.
 - **Version/OEM robustness:** declare
-  `android:widgetFeatures="reconfigurable|configuration_optional"` so API 31+ users can skip
+  `android:ui:widgetFeatures="reconfigurable|configuration_optional"` so API 31+ users can skip
   initial setup and later reconfigure. This flag is **not honored by every OEM** (e.g. Samsung
   still launches the picker) — so the picker is the real path; skipping is an enhancement.
 - **Reconfigure:** a tap action on the widget reopens the picker for **that** `glanceId`
@@ -255,7 +255,7 @@ All settings live **in the app**. A widget is a dumb, stateless renderer of the
 
 ---
 
-## 4. Ring-rendering pipeline (`:widget`)
+## 4. Ring-rendering pipeline (`:ui:widget`)
 
 Because Glance's `CircularProgressIndicator` is **indeterminate-only**, we rasterize the
 determinate ring ourselves.
@@ -381,16 +381,16 @@ provideGlance (suspend, system-created)
 
 ---
 
-## 5. Scheduling (`:core:scheduler` + the refresh mechanism in `:widget`)
+## 5. Scheduling (`:domain:scheduler` + the refresh mechanism in `:ui:widget`)
 
 States per widget instance: **`IDLE → SCHEDULED → REFRESHED → SCHEDULED`**, where `REFRESHED`
 means "a redraw is owed right now" and settling it returns to `SCHEDULED` at the next boundary.
 
-**Why the behaviour is split across two modules.** `:core:scheduler` decides *when*
+**Why the behaviour is split across two modules.** `:domain:scheduler` decides *when*
 (`RefreshBoundaries`, `RefreshCycle`) and is pure Kotlin. The thing that does the waking —
 `WorkManager`, `AlarmManager`, broadcast receivers — has to call `CountdownWidget().updateAll()`,
-so it lives in `:widget`. Putting it in `:core:scheduler` would make a core module depend on a
-feature module (and on Glance); the dependency arrow only ever points `:widget → :core:*`.
+so it lives in `:ui:widget`. Putting it in `:domain:scheduler` would make a core module depend on a
+feature module (and on Glance); the dependency arrow only ever points `:ui:widget → :domain:*`.
 
 | Trigger | Source | Action |
 |---|---|---|
@@ -398,8 +398,8 @@ feature module (and on Glance); the dependency arrow only ever points `:widget �
 | `onEnabled` | framework | `ensurePeriodic()` + forced refresh; starts the ≥15 min heartbeat |
 | `onDisabled` | framework | cancel the heartbeat and the boundary alarm |
 | `onDeleted` | framework | `unbind(glanceId)` in a worker (the `WidgetConfigRecord` persists) |
-| config edited (app) | `:feature:config` | `GlanceAppWidget.update()` for **every** bound `glanceId` |
-| config deleted (app) | `:feature:config` | guard: block if bound, else unbind all + delete |
+| config edited (app) | `:ui:config` | `GlanceAppWidget.update()` for **every** bound `glanceId` |
+| config deleted (app) | `:ui:config` | guard: block if bound, else unbind all + delete |
 | Periodic (15 min) | `WorkManager` unique work | `RefreshGate.decide()`; redraws only when due |
 | Boundary | `setAndAllowWhileIdle` (inexact) | redraw at the next midnight / hour / 6-hour slot |
 | `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED`, `MY_PACKAGE_REPLACED` | system | enqueue one **forced** refresh (boot also re-arms the heartbeat) |
@@ -433,17 +433,17 @@ Workers obtain repositories via Hilt. `GlanceAppWidget` is instantiated by the s
 any dependencies it needs must be resolved through `EntryPointAccessors` (Glance has no
 constructor injection).
 
-**Current state (M2):** `:widget` declares a plain `WidgetDependencies` interface plus a
+**Current state (M2):** `:ui:widget` declares a plain `WidgetDependencies` interface plus a
 `WidgetDependenciesHolder`; `:app` builds the graph by hand in `AppDependencies` and publishes it
-in `Application.onCreate`. This keeps Hilt and its annotation processor out of `:widget` entirely
+in `Application.onCreate`. This keeps Hilt and its annotation processor out of `:ui:widget` entirely
 and lets widget tests construct the interface directly. When the config UI lands, `AppDependencies`
-becomes the `@EntryPoint` implementation and `:widget` does not change.
+becomes the `@EntryPoint` implementation and `:ui:widget` does not change.
 
 ---
 
 ## 7. Threading & statelessness
 
-- Engines are **pure and synchronous** (`:core:time`, `:core:mortality`).
+- Engines are **pure and synchronous** (`:domain:time`, `:domain:mortality`).
 - IO is `suspend`/`Flow` via DataStore; widget exposes state through `provideGlance`'s
   coroutine scope.
 - No mutable global state; no long-lived services; recomposition from persisted truth.
@@ -454,14 +454,14 @@ becomes the `@EntryPoint` implementation and `:widget` does not change.
 
 | Layer | Tooling | What it proves |
 |---|---|---|
-| `:core:time` | JUnit + Kotest property tests | DST, leap years, month ends, tz, zero/negative, far-future; fraction clamping |
-| `:core:mortality` | JUnit + golden files | computed remaining-days matches SSA `e_x` rows within tolerance; net-free hours reproduces published ATUS averages |
-| `:widget` renderer | Robolectric + pixel/hash golden | arc sweep corresponds to fraction; stroke width/diameter; track/progress colors |
+| `:domain:time` | JUnit + Kotest property tests | DST, leap years, month ends, tz, zero/negative, far-future; fraction clamping |
+| `:domain:mortality` | JUnit + golden files | computed remaining-days matches SSA `e_x` rows within tolerance; net-free hours reproduces published ATUS averages |
+| `:ui:widget` renderer | Robolectric + pixel/hash golden | arc sweep corresponds to fraction; stroke width/diameter; track/progress colors |
 | Appearance mapping | JUnit | dp→px diameter, `strokeRatio` clamp, `RingColor.Theme`→concrete resolution, label placement |
 | Templates & layout | JUnit + Roborazzi | each `RingTemplate` seeds expected `WidgetConfigRecord`; `CONCENTRIC` draws N nested arcs; `GRID`/`STACK` arrangement |
 | Widget composition | `runGlanceAppWidgetUnitTest` + Roborazzi screenshots | layout per size, Chronometer presence, ring count, label INSIDE vs UNDER |
 | Catalog & binding | JUnit + in-memory repos | config CRUD; **two bindings to one config both re-render after an edit**; rebind moves an instance; delete guard blocks/clears bindings; picker returns a result carrying `EXTRA_APPWIDGET_ID` |
-| Config UI | Compose UI tests (`:feature:config`) | editing diameter/color/stroke/label updates preview and persists; "Your widgets" lists/rebinds/duplicates/deletes |
+| Config UI | Compose UI tests (`:ui:config`) | editing diameter/color/stroke/label updates preview and persists; "Your widgets" lists/rebinds/duplicates/deletes |
 | Resilience | Instrumented on device + adb | reboot, DST, timezone, manual clock change, Doze, process death |
 | Budget | Battery Historian + `dumpsys appwidget` | wakeups within declared cadence; no ANR |
 

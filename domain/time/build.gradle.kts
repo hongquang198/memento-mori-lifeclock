@@ -1,5 +1,5 @@
-// :core:time — pure Kotlin countdown math (days/weeks/months/net-free-hours).
-// Depends on :core:model but on NO Android framework -> fast, deterministic unit tests.
+// :domain:time — pure Kotlin countdown math (days/weeks/months/net-free-hours).
+// Depends on :domain:model but on NO Android framework -> fast, deterministic unit tests.
 plugins {
     `java-library`
     alias(libs.plugins.kotlin.jvm)
@@ -10,7 +10,7 @@ kotlin {
 }
 
 dependencies {
-    api(project(":core:model"))
+    api(project(":domain:model"))
 
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)

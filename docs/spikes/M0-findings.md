@@ -28,7 +28,7 @@ with the design changes they force.
 No tests: this is a measurement harness, not production logic. The behaviours it measures
 (Doze, boot, widget-host rendering) cannot be expressed as unit tests; they are only observable
 on a device. Every source file above is throwaway and must be deleted before M2 — including the
-two §9 fix files, which call `SpikeRingWidget()` directly and are replaced by `:core:scheduler`
+two §9 fix files, which call `SpikeRingWidget()` directly and are replaced by `:domain:scheduler`
 (T2.12/T2.13).
 
 ### Screenshots (`docs/spikes/`)
@@ -332,7 +332,7 @@ Two practical notes on that channel, learned the hard way:
 §6 left one thing unproven: that moving the boot refresh out of the broadcast actually fixes the
 failure. That is now measured, not argued.
 
-**The change under test** (in `:widget`, for this verification only):
+**The change under test** (in `:ui:widget`, for this verification only):
 
 * `BootRefreshReceiver` — a `BOOT_COMPLETED` receiver whose *only* action is `enqueueUniqueWork`.
   It never renders, because a receiver runs on the same short budget that loses the race (§6).

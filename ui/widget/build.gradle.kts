@@ -1,4 +1,4 @@
-// :widget — HOW a widget is drawn: Glance UI, the rasterized ring bitmap, Chronometer.
+// :ui:widget — HOW a widget is drawn: Glance UI, the rasterized ring bitmap, Chronometer.
 // Glance is "Compose for app widgets", so it needs the Compose compiler plugin.
 plugins {
     alias(libs.plugins.android.library)
@@ -23,11 +23,11 @@ android {
 kotlin { jvmToolchain(17) }
 
 dependencies {
-    implementation(project(":core:model"))
-    implementation(project(":core:time"))
-    implementation(project(":core:data"))
-    implementation(project(":core:mortality"))
-    implementation(project(":core:scheduler"))
+    implementation(project(":domain:model"))
+    implementation(project(":domain:time"))
+    implementation(project(":data"))
+    implementation(project(":domain:mortality"))
+    implementation(project(":domain:scheduler"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.glance.appwidget)

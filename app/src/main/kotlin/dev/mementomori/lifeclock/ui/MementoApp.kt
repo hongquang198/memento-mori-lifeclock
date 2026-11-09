@@ -1,5 +1,6 @@
 package dev.mementomori.lifeclock.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +40,7 @@ import dev.mementomori.lifeclock.model.PersonProfile
 import dev.mementomori.lifeclock.model.WidgetConfigRecord
 import dev.mementomori.lifeclock.model.WidgetType
 import dev.mementomori.lifeclock.widget.config.configureIntent
+import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -47,6 +51,47 @@ private sealed interface Screen {
     data class Profile(val profileId: String?) : Screen
     data class Config(val initial: WidgetConfigRecord) : Screen
 }
+
+/**
+ * Survives rotation and process death, which `remember` did not: the app used to fall back to Home
+ * on a rotation, and the system back gesture always finished the activity because nothing had
+ * claimed it (see [MementoApp]).
+ *
+ * A string key, not the object graph: `WidgetConfigRecord` is already `@Serializable`, so the editor
+ * screen can be rebuilt exactly, and an unparseable value degrades to `null` (Home) instead of
+ * crashing the activity on restore.
+ */
+private val screenJson = Json { ignoreUnknownKeys = true }
+
+private val ScreenSaver: Saver<Screen, String> = Saver(
+    save = { screen ->
+        when (screen) {
+            Screen.Home -> "home"
+            Screen.Widgets -> "widgets"
+            is Screen.Profile -> "profile:${screen.profileId.orEmpty()}"
+            is Screen.Config -> "config:" + screenJson.encodeToString(
+                WidgetConfigRecord.serializer(),
+                screen.initial,
+            )
+        }
+    },
+    restore = { saved ->
+        when {
+            saved == "home" -> Screen.Home
+            saved == "widgets" -> Screen.Widgets
+            saved.startsWith("profile:") -> Screen.Profile(saved.removePrefix("profile:").ifEmpty { null })
+            saved.startsWith("config:") -> runCatching {
+                Screen.Config(
+                    screenJson.decodeFromString(
+                        WidgetConfigRecord.serializer(),
+                        saved.removePrefix("config:"),
+                    ),
+                )
+            }.getOrNull()
+            else -> null
+        }
+    },
+)
 
 private fun Screen.title(): String = when (this) {
     Screen.Home -> "Memento Mori"
@@ -60,13 +105,20 @@ private fun Screen.title(): String = when (this) {
  *
  * Deliberately not a navigation graph. There are four destinations and no deep links; a library
  * would add a dependency and a back-stack abstraction without removing a line of code here.
+ *
+ * What Compose does not provide for free is the back bridge that Flutter installs with `WidgetsApp`.
+ * The system gesture reaches the activity's `OnBackPressedDispatcher`; with no callback registered
+ * it falls through to `finish()`, which is why back used to close the app from any screen. One
+ * `BackHandler` is the whole fix at this depth.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MementoApp(viewModel: MainViewModel) {
-    var screen by remember { mutableStateOf<Screen>(Screen.Home) }
+    var screen by rememberSaveable(stateSaver = ScreenSaver) { mutableStateOf<Screen>(Screen.Home) }
     val snackbar = remember { SnackbarHostState() }
     val message by viewModel.message.collectAsState()
+
+    BackHandler(enabled = screen != Screen.Home) { screen = Screen.Home }
 
     LaunchedEffect(message) {
         message?.let {

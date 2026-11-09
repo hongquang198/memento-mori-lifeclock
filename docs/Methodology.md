@@ -2,7 +2,7 @@
 
 Every number the app shows is either **derived from a cited source** or **an assumption we own**.
 Nothing is a default we cannot defend. This file is the contract; the code is the implementation of
-it, and the tests in `:core:mortality` pin the numbers.
+it, and the tests in `:domain:mortality` pin the numbers.
 
 ## 1. Sources and vintages
 

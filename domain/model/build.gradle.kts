@@ -1,4 +1,4 @@
-// :core:model — the innermost layer. Pure Kotlin (JVM), NO Android dependencies.
+// :domain:model — the innermost layer. Pure Kotlin (JVM), NO Android dependencies.
 // Keeping it Android-free is what lets the layers above be unit-tested with zero emulator.
 plugins {
     `java-library`          // gives us the `api`/`implementation` split
@@ -11,7 +11,7 @@ kotlin {
 }
 
 dependencies {
-    // `api` = consumers of :core:model also get serialization (their types embed ours).
+    // `api` = consumers of :domain:model also get serialization (their types embed ours).
     api(libs.kotlinx.serialization.json)
 
     testImplementation(libs.kotest.runner.junit5)

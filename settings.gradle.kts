@@ -27,12 +27,22 @@ dependencyResolutionManagement {
 
 rootProject.name = "memento-mori-lifeclock"
 
-// The module map from docs/design.md §1. Each `include` maps a folder to a Gradle module.
-// `:core:*` are the pure/inner layers; `:widget`/`:feature:*` are Android UI; `:app` wires it up.
+// The layer map. A module's Gradle path names its layer, so the structure answers "which layer is
+// this?" without a table to memorise:
+//
+//   :domain:*  the domain layer - pure JVM, no Android on the classpath. Enforced by
+//              ArchitectureGuardTest, not by discipline.
+//   :data      the data layer - repositories over DataStore.
+//   :ui:*      Android UI surfaces. Compose lives in :app; Glance (app widgets) in :ui:widget.
+//   :app       the composition root and the Compose UI. The one conventional exception to the
+//              prefix rule: an Android application module is always called :app.
+//
+// Adding a module? Ask which layer it belongs to, then put it under that prefix. If it fits none,
+// the design is wrong, not the naming.
+include(":domain:model")
+include(":domain:time")
+include(":domain:mortality")
+include(":domain:scheduler")
+include(":data")
+include(":ui:widget")
 include(":app")
-include(":core:model")
-include(":core:time")
-include(":core:mortality")
-include(":core:data")
-include(":core:scheduler")
-include(":widget")

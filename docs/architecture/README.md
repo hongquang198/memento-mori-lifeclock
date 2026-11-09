@@ -1,9 +1,9 @@
 # Architecture diagrams
 
 `widget-runtime.html` is a standalone, interactive map of the Android app-widget platform
-together with this app's `:widget` probe code. Open it in a browser; no server or install is
+together with this app's `:ui:widget` probe code. Open it in a browser; no server or install is
 needed. It exists because the wiring between the platform and our code is invisible in the
-source: nothing in `:widget` shows you that the launcher is the process that actually draws
+source: nothing in `:ui:widget` shows you that the launcher is the process that actually draws
 the widget, or that a boot-time `onUpdate` runs on a borrowed budget.
 
 What it shows, in the order things actually run:

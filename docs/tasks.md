@@ -32,7 +32,7 @@ vs widget-host-process split, why Glance's circular indicator is indeterminate-o
 **Review focus:** read the spike code + `docs/spikes/M0-findings.md`. This is where every
 "why does the design look like that?" answer lives.
 
-- [x] **T0.1** Create Gradle skeleton: `:core:model`, `:core:time`, `:core:mortality`, `:core:data`, `:core:scheduler`, `:widget`, `:feature:config`, `:app`; minSdk 26, Kotlin, Hilt, Glance.
+- [x] **T0.1** Create Gradle skeleton: `:domain:model`, `:domain:time`, `:domain:mortality`, `:data`, `:domain:scheduler`, `:ui:widget`, `:ui:config`, `:app`; minSdk 26, Kotlin, Hilt, Glance.
 - [x] **T0.2** Spike: render a determinate ring via `Canvas.drawArc` → `Bitmap` → Glance `ImageProvider`; confirm it displays on a **physical device**.
 - [x] **T0.3** Spike: `RemoteViews` `Chronometer` with `setCountDown(true)` + `setBase(end)`; confirm it ticks without our code running.
 - [x] **T0.4** Measure: place widget, screen off, observe actual update cadence under **Doze/App Standby** (`adb shell dumpsys appwidget`, Battery Historian).
@@ -41,7 +41,7 @@ vs widget-host-process split, why Glance's circular indicator is indeterminate-o
 
 ---
 
-## M1 — Time engine (`:core:time`, pure Kotlin, TDD)
+## M1 — Time engine (`:domain:time`, pure Kotlin, TDD)
 **Goal:** the pure time math — turning an interval into days/weeks/calendar-months/net-free
 hours with ring fractions — decoupled from Android entirely.
 **Learn:** Kotlin data/sealed types; `java.time` (`Instant`, `Duration`, `ChronoUnit`); why
@@ -60,7 +60,7 @@ module has **zero** Android imports — the boundary is the lesson.
 - [x] **T1.7** Tests: DST transitions, timezone-sensitive `Instant` handling, far-future dates.
 - [x] **T1.8** Impl: fix any tz/DST defects; `NET_FREE_HOURS` slice (sleep + maintenance subtracted).
 - [x] **T1.9** Property tests (Kotest): `fractionRemaining ∈ [0,1]`, monotonic decrease over time.
-- **DoD:** **Met** — 31 tests green in ~0.5 s; `:core:time` has no Android dependency and no
+- **DoD:** **Met** — 31 tests green in ~0.5 s; `:domain:time` has no Android dependency and no
   `android.*` import. Two contract changes were forced by the work itself: `TimeSlice.remaining` /
   `total` are `Long` **counts**, not `Duration` (a month has no fixed length), and `slices()` takes
   a `ZoneId` (a calendar month does not exist without a zone). Both are recorded in `design.md` §2.2.
@@ -71,7 +71,7 @@ module has **zero** Android imports — the boundary is the lesson.
 
 ---
 
-## M2 — Countdown widget v1 (`:widget`, `:core:data`, `:core:scheduler`)
+## M2 — Countdown widget v1 (`:ui:widget`, `:data`, `:domain:scheduler`)
 **Goal:** the first end-to-end, placeable countdown widget — catalog config → binding →
 ring + live text on the home screen, refreshed on a sane cadence.
 **Learn:** Gradle multi-module wiring; Jetpack DataStore + `kotlinx.serialization`; how Glance
@@ -99,7 +99,7 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 
 ### Scheduling
 - [x] **T2.11** Tests: scheduling state machine transitions (IDLE→SCHEDULED→REFRESHED) with fake triggers. → `core/scheduler`: 15 tests (boundaries + cycle).
-- [x] **T2.12** Impl: unique periodic `WorkManager` work (15 min) + inexact boundary alarm (`setAndAllowWhileIdle`); gate ring redraw by `RefreshIntent` granularity. → policy in `:core:scheduler` (pure), mechanism in `:widget` (`WidgetRefreshScheduler`, `RefreshGate`, `CountdownRefreshWorker`); 6 gate tests.
+- [x] **T2.12** Impl: unique periodic `WorkManager` work (15 min) + inexact boundary alarm (`setAndAllowWhileIdle`); gate ring redraw by `RefreshIntent` granularity. → policy in `:domain:scheduler` (pure), mechanism in `:ui:widget` (`WidgetRefreshScheduler`, `RefreshGate`, `CountdownRefreshWorker`); 6 gate tests.
 - [x] **T2.13** Impl: receivers for `BOOT_COMPLETED`, `TIME_SET`, `TIMEZONE_CHANGED`, `DATE_CHANGED` (+ `MY_PACKAGE_REPLACED`) → enqueue a forced refresh; the boot path also re-arms the heartbeat. Split into `WidgetRefreshReceiver` (never draws) and `CountdownRefreshWorker` (draws), productionising the mechanism proven in spike §9.
   - **Still open:** the framework's warm `onUpdate` race. Left as-is (super called) rather than deferring it to WorkManager un-measured; the deferral latency needs a device.
   - **Still open:** the **visual** check of the boot path (`§9` showed `provideGlance` running ≠ a complete frame). Needs the phone.
@@ -108,7 +108,7 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 
 ### Config Activity & binding (feature D)
 - [x] **T2.15** Tests: picker config Activity returns a result carrying `EXTRA_APPWIDGET_ID`; choosing a config calls `bind()`. (`ConfigPickerTest` 6, `ConfigActivityTest` 5 — Robolectric, incl. the tap-intent contract.)
-- [x] **T2.16** Impl: `:widget` **picker** config Activity (`android:configure`) listing saved configs; `widgetFeatures="reconfigurable"`; request a refresh after binding.
+- [x] **T2.16** Impl: `:ui:widget` **picker** config Activity (`android:configure`) listing saved configs; `widgetFeatures="reconfigurable"`; request a refresh after binding.
   - **Deviation from the plan, both decided on the device (Pixel 8a, API 36):**
     - **`configuration_optional` dropped.** With it the launcher placed the widget *without* running the picker, leaving a placeholder that nothing could configure. The widget is useless unbound, so placement must configure.
     - **No "New" row.** Without an editor (feature C) a new config would be an indistinguishable copy; it returns with the editor.
@@ -120,7 +120,7 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
   - **Reboot:** the frame was correct after boot + unlock (`render(16)` at 12:47:31), but the draw was the **periodic heartbeat**, not the boot receiver — `refresh(BOOT_COMPLETED)` was never logged. `BOOT_COMPLETED` is withheld until first unlock (the receiver is deliberately not `directBootAware`) and the phone stayed locked through the whole heartbeat window, so the boot branch never got a clean shot. **Closed by test instead of another reboot:** `WidgetRefreshReceiverTest` fires every handled action at the receiver and asserts exactly one immediate refresh (plus the heartbeat for boot/reinstall). What stays unproven is Android's *delivery* of `BOOT_COMPLETED` — platform contract, not our code — and the guarantee holds either way, because the heartbeat covers the same window within 15 minutes.
   - **Found and fixed here — the heartbeat was a silent no-op.** `GlanceAppWidget.updateAll` reads Glance's own id registry, which is written by the receiver's `onUpdate` (the callback M0 proved unreliable). On this device the registry was empty: `updateAll` updated zero widgets while the gate logged `drew=true`, and the widget sat on its placeholder. `updatePlacedWidgets` now enumerates `AppWidgetManager.getAppWidgetIds(provider)` and logs the count (`widgets=N`), so "drew nothing" can never look like "drew fine" again. **Guard:** `UpdatePlacedWidgetsTest` asserts one draw per id the platform reports, and it was mutation-checked by restoring `updateAll` — the test fails with `expected:<[1, 2]> but was:<[]>`. Robolectric cannot observe Glance's apply (`getViewFor` stays on the initial layout, because composition is handed to a session scope), so the seam is the assertion and the launcher receipt stays a device observation.
   - **Found and fixed here — the ring overflowed its cell.** A 2-column cell reports 140 dp; the default ring is 160 dp, so the arc was clipped on both sides. `fitDiameterDp` caps the draw to `cell - 16 dp` (never grows a small ring, never rewrites the config). Log now carries `cell=140dp` and the fitted bitmap size.
-  - **Found and fixed here — a package move silently killed the receiver.** Reorganising `:widget` into `config/ content/ render/ refresh/` rewrote every `package` line but not `android:name` in the manifest. The build stayed green; the first broadcast after install died with `ClassNotFoundException: ...widget.WidgetRefreshReceiver` and a `FATAL EXCEPTION` in the app process. `ManifestComponentsTest` now resolves every declared activity and receiver with `Class.forName`, so the compiler's blind spot has a test.
+  - **Found and fixed here — a package move silently killed the receiver.** Reorganising `:ui:widget` into `config/ content/ render/ refresh/` rewrote every `package` line but not `android:name` in the manifest. The build stayed green; the first broadcast after install died with `ClassNotFoundException: ...widget.WidgetRefreshReceiver` and a `FATAL EXCEPTION` in the app process. `ManifestComponentsTest` now resolves every declared activity and receiver with `Class.forName`, so the compiler's blind spot has a test.
 - **Carried into T2.15:** a config may hold N rings, but every ring shares one target and
   `TimeSlice.fractionRemaining` is identical across categories, so N rings currently draw N
   *identical* arcs. Decide what a second ring means (extra targets / a different ratio / pure
@@ -130,7 +130,7 @@ lifecycle; the config-Activity contract (`EXTRA_APPWIDGET_ID`); Hilt dependency 
 
 ---
 
-## M3 — Memento-mori engine + life-clock (`:core:mortality`)
+## M3 — Memento-mori engine + life-clock (`:domain:mortality`)
 **Goal:** the credibility engine — compute life-remaining statistics from primary sources and
 render them as a multi-ring life-clock.
 **Learn:** data-driven engines with bundled assets; source-bound constants with a `Citation`
@@ -170,7 +170,7 @@ entire credibility. Check `Methodology.md` against the tests.
 
 ---
 
-## M4 — Appearance, presets & UX polish (`:widget`, `:feature:config`)
+## M4 — Appearance, presets & UX polish (`:ui:widget`, `:ui:config`)
 **Goal:** make it configurable and good-looking — the appearance editor, preset templates,
 layout arrangements, and the in-app catalog/instance manager.
 **Learn:** Compose UI state + live preview; sealed types driving preset/layout behavior;
@@ -181,7 +181,7 @@ widget" (T4.16) — a common place for widgets to drift from their preview.
 
 ### Appearance editor (feature C)
 - [x] **T4.1** Tests: `RingPresetsTest` pins every preset (diameter, stroke, placement, layout, rings).
-- [x] **T4.2** Impl: `RingPresets` in `:core:model` (Classic, Compact, Bold, Minimal, Concentric,
+- [x] **T4.2** Impl: `RingPresets` in `:domain:model` (Classic, Compact, Bold, Minimal, Concentric,
   Gallery) + `apply()` that keeps identity/target and replaces appearance; `CUSTOM` is an outcome,
   so seeding it throws instead of inventing a look.
 - [x] **T4.3** Tests: `LayoutPlanTest` - SINGLE draws the first ring only, STACK/GRID draw all,
@@ -205,7 +205,7 @@ widget" (T4.16) — a common place for widgets to drift from their preview.
 
 ### Widget catalog & instance manager (feature D)
 - [x] **T4.10** Tests (Compose UI): catalog screen creates/renames/duplicates/deletes configs.
-  **Deviation:** covered by the delete-guard repository tests (`:core:data`) and the device run;
+  **Deviation:** covered by the delete-guard repository tests (`:data`) and the device run;
   renaming lives in the editor's single name field instead of an inline dialog.
 - [x] **T4.11** Impl: catalog screen (list of `WidgetConfigRecord`) + "New config" entry point.
 - [x] **T4.12** Tests: "Your widgets" lists placed instances; rebind changes the rendered config; delete guards a bound config.
@@ -416,7 +416,7 @@ not assurances.
 
 ## Cross-cutting (run on every PR)
 - [ ] `./gradlew test` — pure-JVM unit tests.
-- [ ] `./gradlew :widget:verifyRoborazziDebug` (or Paparazzi) — screenshot goldens.
+- [ ] `./gradlew :ui:widget:verifyRoborazziDebug` (or Paparazzi) — screenshot goldens.
 - [ ] `./gradlew lint` — Android lint clean.
-- [ ] Confirm `:core:time` and `:core:mortality` still have **no Android imports** (architecture guard test).
+- [ ] Confirm `:domain:time` and `:domain:mortality` still have **no Android imports** (architecture guard test).
 

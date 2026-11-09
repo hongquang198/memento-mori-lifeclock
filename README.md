@@ -14,18 +14,23 @@ tables, shipped as a 10k-row CSV and interpolated at the person's age - see
 
 ## Modules
 
-| Module | Kind | Owns |
-| --- | --- | --- |
-| `:core:model` | JVM | `PersonProfile`, `WidgetConfigRecord`, ring styles, presets, and the editor drafts |
-| `:core:time` | JVM | `TimeSlice`, calendar categories, remaining-fraction math |
-| `:core:scheduler` | JVM | refresh cadence policy - no Android types |
-| `:core:mortality` | JVM | life-table parsing, `LifeStatsEngine`, `ProfileValidator`, `ProfileDraft` |
-| `:core:data` | Android lib | DataStore repositories + delete guards |
-| `:widget` | Android lib | Glance widget, ring rendering, picker, workers, refresh gate |
-| `:app` | Android app | composition root (Hilt graph, wiring) + the Compose editor |
+A module's **Gradle path names its layer**, so the structure answers "which layer is this?"
+without a table to memorise. `settings.gradle.kts` groups them the same way.
 
-The dependency arrow only points inward: `:app` -> `:widget` -> `:core:*`. `:core:time` and
-`:core:mortality` contain no Android imports (there is a guard test for it).
+| Module | Kind | Layer | Owns |
+| --- | --- | --- | --- |
+| `:domain:model` | JVM | domain | `PersonProfile`, `WidgetConfigRecord`, ring styles, presets, editor drafts |
+| `:domain:time` | JVM | domain | `TimeSlice`, calendar categories, remaining-fraction math |
+| `:domain:mortality` | JVM | domain | life-table parsing, `LifeStatsEngine`, `ProfileValidator`, `ProfileDraft` |
+| `:domain:scheduler` | JVM | domain | refresh cadence policy - no Android types |
+| `:data` | Android lib | data | DataStore repositories + delete guards |
+| `:ui:widget` | Android lib | UI | Glance widget, ring rendering, picker, workers, refresh gate |
+| `:app` | Android app | UI + composition root | Hilt graph, wiring, the Compose screens |
+
+The dependency arrow only points inward: `:app` -> `:ui:widget` -> `:data` -> `:domain:model`, and
+`:app`/`:ui:widget` -> `:domain:*`. `:domain:*` contains no Android imports — enforced by
+`ArchitectureGuardTest`, not by discipline. See `docs/Architecture.md` for the layer map and the
+Flutter-to-Kotlin naming table.
 
 ## Build, install, test
 
@@ -37,8 +42,8 @@ The dependency arrow only points inward: `:app` -> `:widget` -> `:core:*`. `:cor
 ./gradlew :app:installDebug
 
 # Unit tests, module by module (all JVM, no device needed)
-./gradlew :core:model:test :core:time:test :core:scheduler:test :core:mortality:test
-./gradlew :core:data:test :widget:testDebugUnitTest
+./gradlew :domain:model:test :domain:time:test :domain:scheduler:test :domain:mortality:test
+./gradlew :data:test :ui:widget:testDebugUnitTest
 
 # Everything at once
 ./gradlew test
@@ -93,7 +98,7 @@ Rules that save a support conversation later:
   ask you to confirm ("Install anyway"). Prefer a file link (Drive) over a chat app, which may strip
   or block `.apk` attachments.
 
-If `:widget:bundleLibCompileToJarDebug` fails with "The process cannot access the file", a Kotlin
+If `:ui:widget:bundleLibCompileToJarDebug` fails with "The process cannot access the file", a Kotlin
 daemon or language server is holding the jar: kill `java.exe` processes whose command line matches
 `kotlin-daemon|kotlinLanguageServer`, delete `widget/build/intermediates/compile_library_classes_jar`,
 and rebuild.

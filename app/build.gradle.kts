@@ -69,13 +69,13 @@ kotlin { jvmToolchain(17) }
 
 dependencies {
     // Inner layers
-    implementation(project(":core:model"))
-    implementation(project(":core:time"))
-    implementation(project(":core:mortality"))
-    implementation(project(":core:data"))
-    implementation(project(":core:scheduler"))
+    implementation(project(":domain:model"))
+    implementation(project(":domain:time"))
+    implementation(project(":domain:mortality"))
+    implementation(project(":data"))
+    implementation(project(":domain:scheduler"))
     // Outer layers
-    implementation(project(":widget"))
+    implementation(project(":ui:widget"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -29,7 +29,7 @@ A milestone is not finished because the tests are green. It is finished when I c
 
 **Status: closed** — 8/8 (2026-10-23). The one sentence to carry forward: *a frame is only guaranteed if the system is tracking the work; a broadcast is not a place to compose.*
 
-## M1 — countdown math (`:core:time`)
+## M1 — countdown math (`:domain:time`)
 
 Asked when M0 is closed, since M1 was built before this rule existed.
 

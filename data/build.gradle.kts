@@ -1,4 +1,4 @@
-// :core:data — persistence (Jetpack DataStore). An Android library because DataStore is.
+// :data — persistence (Jetpack DataStore). An Android library because DataStore is.
 // Holds widget configs, instance bindings and the profile; exposes repositories only.
 plugins {
     alias(libs.plugins.android.library)
@@ -19,7 +19,7 @@ android {
 kotlin { jvmToolchain(17) }
 
 dependencies {
-    api(project(":core:model"))
+    api(project(":domain:model"))
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
 
